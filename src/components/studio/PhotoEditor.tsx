@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  Type, Square, Circle as CircleIcon, Star, Heart,
+  Type, Square, Circle as CircleIcon,
   Smile, Download, Undo2, Redo2, Trash2, 
-  Palette, Sun, Contrast, Droplets, X, Save
+  Sun, Contrast, Droplets, X, Save,
+  Droplet, Eye, Focus
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,11 +28,27 @@ const stickers = [
   { id: "party", emoji: "🎉" },
   { id: "rocket", emoji: "🚀" },
   { id: "check", emoji: "✅" },
+  { id: "eyes", emoji: "👀" },
+  { id: "100", emoji: "💯" },
+  { id: "sparkles", emoji: "✨" },
+  { id: "sun", emoji: "☀️" },
 ];
 
 const shapes = [
   { id: "rect", label: "Rectangle", icon: Square },
   { id: "circle", label: "Circle", icon: CircleIcon },
+];
+
+// Preset filter combinations
+const filterPresets = [
+  { id: "none", label: "None", brightness: 0, contrast: 0, saturation: 0, blur: 0, grayscale: false, sepia: false },
+  { id: "vivid", label: "Vivid", brightness: 10, contrast: 20, saturation: 30, blur: 0, grayscale: false, sepia: false },
+  { id: "moody", label: "Moody", brightness: -10, contrast: 30, saturation: -20, blur: 0, grayscale: false, sepia: false },
+  { id: "bw", label: "B&W", brightness: 0, contrast: 20, saturation: 0, blur: 0, grayscale: true, sepia: false },
+  { id: "sepia", label: "Sepia", brightness: 10, contrast: 0, saturation: 0, blur: 0, grayscale: false, sepia: true },
+  { id: "soft", label: "Soft", brightness: 15, contrast: -10, saturation: 10, blur: 0.5, grayscale: false, sepia: false },
+  { id: "dramatic", label: "Dramatic", brightness: -5, contrast: 40, saturation: 10, blur: 0, grayscale: false, sepia: false },
+  { id: "vintage", label: "Vintage", brightness: 5, contrast: 10, saturation: -30, blur: 0, grayscale: false, sepia: true },
 ];
 
 export const PhotoEditor = ({ imageUrl, onSave, onClose }: PhotoEditorProps) => {
@@ -40,9 +57,19 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }: PhotoEditorProps) => 
   const [activeColor, setActiveColor] = useState("#ffffff");
   const [textValue, setTextValue] = useState("Your Text");
   const [fontSize, setFontSize] = useState(32);
+  
+  // Basic filters
   const [brightness, setBrightness] = useState(0);
   const [contrast, setContrast] = useState(0);
   const [saturation, setSaturation] = useState(0);
+  
+  // Advanced filters
+  const [blur, setBlur] = useState(0);
+  const [grayscale, setGrayscale] = useState(false);
+  const [sepia, setSepia] = useState(false);
+  const [sharpen, setSharpen] = useState(0);
+  const [vignette, setVignette] = useState(0);
+  
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
@@ -183,6 +210,15 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }: PhotoEditorProps) => 
     }
   };
 
+  const applyPreset = (preset: typeof filterPresets[0]) => {
+    setBrightness(preset.brightness);
+    setContrast(preset.contrast);
+    setSaturation(preset.saturation);
+    setBlur(preset.blur);
+    setGrayscale(preset.grayscale);
+    setSepia(preset.sepia);
+  };
+
   const applyFilters = useCallback(() => {
     if (!fabricCanvas) return;
     
@@ -192,27 +228,57 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }: PhotoEditorProps) => 
     if (bgImage && bgImage instanceof FabricImage) {
       bgImage.filters = [];
       
+      // Import filters dynamically
+      const fabric = require("fabric");
+      
       if (brightness !== 0) {
-        const { Brightness } = require("fabric");
-        bgImage.filters.push(new Brightness({ brightness: brightness / 100 }));
+        bgImage.filters.push(new fabric.Brightness({ brightness: brightness / 100 }));
       }
       if (contrast !== 0) {
-        const { Contrast } = require("fabric");
-        bgImage.filters.push(new Contrast({ contrast: contrast / 100 }));
+        bgImage.filters.push(new fabric.Contrast({ contrast: contrast / 100 }));
       }
       if (saturation !== 0) {
-        const { Saturation } = require("fabric");
-        bgImage.filters.push(new Saturation({ saturation: saturation / 100 }));
+        bgImage.filters.push(new fabric.Saturation({ saturation: saturation / 100 }));
+      }
+      if (blur > 0) {
+        bgImage.filters.push(new fabric.Blur({ blur: blur / 10 }));
+      }
+      if (grayscale) {
+        bgImage.filters.push(new fabric.Grayscale());
+      }
+      if (sepia) {
+        bgImage.filters.push(new fabric.Sepia());
+      }
+      if (sharpen > 0) {
+        // Sharpen using convolute filter
+        bgImage.filters.push(new fabric.Convolute({
+          matrix: [
+            0, -sharpen / 100, 0,
+            -sharpen / 100, 1 + 4 * (sharpen / 100), -sharpen / 100,
+            0, -sharpen / 100, 0
+          ]
+        }));
       }
       
       bgImage.applyFilters();
       fabricCanvas.renderAll();
     }
-  }, [fabricCanvas, brightness, contrast, saturation]);
+  }, [fabricCanvas, brightness, contrast, saturation, blur, grayscale, sepia, sharpen]);
 
   useEffect(() => {
     applyFilters();
-  }, [brightness, contrast, saturation, applyFilters]);
+  }, [brightness, contrast, saturation, blur, grayscale, sepia, sharpen, applyFilters]);
+
+  const resetFilters = () => {
+    setBrightness(0);
+    setContrast(0);
+    setSaturation(0);
+    setBlur(0);
+    setGrayscale(false);
+    setSepia(false);
+    setSharpen(0);
+    setVignette(0);
+  };
 
   const handleSave = () => {
     if (!fabricCanvas) return;
@@ -380,7 +446,23 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }: PhotoEditorProps) => 
             </TabsContent>
 
             <TabsContent value="filters" className="space-y-4">
+              {/* Filter Presets */}
               <div>
+                <Label className="mb-2 block">Presets</Label>
+                <div className="grid grid-cols-4 gap-1">
+                  {filterPresets.map((preset) => (
+                    <button
+                      key={preset.id}
+                      onClick={() => applyPreset(preset)}
+                      className="p-2 text-xs rounded border border-border hover:border-primary hover:bg-primary/10 transition-colors"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-4">
                 <Label className="flex items-center gap-2">
                   <Sun className="h-4 w-4" />
                   Brightness: {brightness}
@@ -393,6 +475,7 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }: PhotoEditorProps) => 
                   step={1}
                 />
               </div>
+              
               <div>
                 <Label className="flex items-center gap-2">
                   <Contrast className="h-4 w-4" />
@@ -406,6 +489,7 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }: PhotoEditorProps) => 
                   step={1}
                 />
               </div>
+              
               <div>
                 <Label className="flex items-center gap-2">
                   <Droplets className="h-4 w-4" />
@@ -419,13 +503,59 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }: PhotoEditorProps) => 
                   step={1}
                 />
               </div>
+
+              <div>
+                <Label className="flex items-center gap-2">
+                  <Droplet className="h-4 w-4" />
+                  Blur: {blur}
+                </Label>
+                <Slider
+                  value={[blur]}
+                  onValueChange={([v]) => setBlur(v)}
+                  min={0}
+                  max={10}
+                  step={0.1}
+                />
+              </div>
+
+              <div>
+                <Label className="flex items-center gap-2">
+                  <Focus className="h-4 w-4" />
+                  Sharpen: {sharpen}
+                </Label>
+                <Slider
+                  value={[sharpen]}
+                  onValueChange={([v]) => setSharpen(v)}
+                  min={0}
+                  max={100}
+                  step={1}
+                />
+              </div>
+
+              {/* Toggle Filters */}
+              <div className="flex gap-2">
+                <Button
+                  variant={grayscale ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setGrayscale(!grayscale)}
+                  className="flex-1"
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  B&W
+                </Button>
+                <Button
+                  variant={sepia ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSepia(!sepia)}
+                  className="flex-1"
+                >
+                  Sepia
+                </Button>
+              </div>
+
               <Button
                 variant="outline"
-                onClick={() => {
-                  setBrightness(0);
-                  setContrast(0);
-                  setSaturation(0);
-                }}
+                onClick={resetFilters}
                 className="w-full"
               >
                 Reset Filters
