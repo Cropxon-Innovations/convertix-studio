@@ -16,6 +16,11 @@ import DesktopPage from "./pages/DesktopPage";
 import PricingPage from "./pages/PricingPage";
 import DocsPage from "./pages/DocsPage";
 import SignInPage from "./pages/SignInPage";
+import AboutPage from "./pages/AboutPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import CookiePolicyPage from "./pages/CookiePolicyPage";
+import TermsPage from "./pages/TermsPage";
+import RefundPolicyPage from "./pages/RefundPolicyPage";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +60,11 @@ const App = () => (
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/signin" element={<SignInPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/cookies" element={<CookiePolicyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/refund" element={<RefundPolicyPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

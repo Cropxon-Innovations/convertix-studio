@@ -35,19 +35,22 @@ export const Footer = () => {
           </div>
 
           <div>
-            <h4 className="text-sm font-medium text-foreground mb-4">Studios</h4>
+            <h4 className="text-sm font-medium text-foreground mb-4">Legal</h4>
             <nav className="flex flex-col gap-2">
-              <Link to="/studio/documents" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Document Studio
+              <Link to="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                About
               </Link>
-              <Link to="/studio/images" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Image Studio
+              <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Privacy Policy
               </Link>
-              <Link to="/studio/developer" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Developer Studio
+              <Link to="/cookies" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Cookie Policy
               </Link>
-              <Link to="/studio/media" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Media Studio
+              <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Terms & Conditions
+              </Link>
+              <Link to="/refund" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Refund Policy
               </Link>
             </nav>
           </div>
@@ -57,12 +60,21 @@ export const Footer = () => {
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} CropXon. All rights reserved.
           </p>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+            <Link to="/about" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              About
+            </Link>
             <Link to="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               Privacy
             </Link>
+            <Link to="/cookies" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Cookies
+            </Link>
             <Link to="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               Terms
+            </Link>
+            <Link to="/refund" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Refunds
             </Link>
           </div>
         </div>

@@ -1,10 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { StudioLayout } from "@/components/layout/StudioLayout";
 import { Button } from "@/components/ui/button";
 import { 
   FileText, Upload, Download, Clock, Tag, 
   FileOutput, Minimize2, Type, Layers, Trash2,
-  Lock, ChevronRight, CheckCircle, AlertCircle, Loader2, History
+  Lock, ChevronRight, CheckCircle, AlertCircle, Loader2, History,
+  Play, Pause, ListOrdered, X
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useConversions } from "@/hooks/useConversions";
@@ -22,8 +23,16 @@ const tools = [
 interface ProcessingFile {
   file: File;
   progress: number;
-  status: "pending" | "processing" | "completed" | "failed";
+  status: "queued" | "pending" | "processing" | "completed" | "failed" | "paused";
   outputUrl?: string;
+  queuePosition?: number;
+}
+
+interface BatchQueueItem {
+  id: string;
+  file: File;
+  toolId: string;
+  status: "queued" | "processing" | "completed" | "failed";
 }
 
 const DocumentStudio = () => {
@@ -32,7 +41,11 @@ const DocumentStudio = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [processingFiles, setProcessingFiles] = useState<Map<string, ProcessingFile>>(new Map());
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
+  const [batchQueue, setBatchQueue] = useState<BatchQueueItem[]>([]);
+  const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
   const { user } = useAuth();
   const { conversions, addConversion, updateConversion } = useConversions();
   const navigate = useNavigate();
@@ -78,83 +91,156 @@ const DocumentStudio = () => {
     return filename.split('.').pop()?.toLowerCase() || '';
   };
 
-  const processFiles = async () => {
+  // Add files to batch queue
+  const addToQueue = () => {
     if (files.length === 0) return;
+    
+    const newQueueItems: BatchQueueItem[] = files.map((file, index) => ({
+      id: `${file.name}-${Date.now()}-${index}`,
+      file,
+      toolId: activeTool,
+      status: "queued" as const,
+    }));
+    
+    setBatchQueue(prev => [...prev, ...newQueueItems]);
+    setFiles([]);
+    setShowQueue(true);
+    
+    toast({
+      title: "Added to Queue",
+      description: `${newQueueItems.length} file(s) added to processing queue`,
+    });
+  };
+
+  const removeFromQueue = (id: string) => {
+    setBatchQueue(prev => prev.filter(item => item.id !== id));
+  };
+
+  const clearQueue = () => {
+    setBatchQueue([]);
+    setCurrentQueueIndex(0);
+  };
+
+  const processFiles = async () => {
+    if (files.length === 0 && batchQueue.length === 0) return;
+    
+    // If there are files not in queue, add them first
+    if (files.length > 0) {
+      addToQueue();
+      return;
+    }
+    
     setIsProcessing(true);
+    setIsPaused(false);
     
     const tool = tools.find(t => t.id === activeTool);
     if (!tool) return;
 
-    // Initialize processing state for all files
+    // Initialize processing state for all queued files
     const newProcessingFiles = new Map<string, ProcessingFile>();
-    files.forEach(file => {
-      newProcessingFiles.set(file.name, { file, progress: 0, status: "pending" });
+    batchQueue.forEach((item, index) => {
+      newProcessingFiles.set(item.id, { 
+        file: item.file, 
+        progress: 0, 
+        status: "queued",
+        queuePosition: index + 1
+      });
     });
     setProcessingFiles(newProcessingFiles);
 
-    // Process each file
-    for (const file of files) {
+    // Process queue
+    for (let i = currentQueueIndex; i < batchQueue.length; i++) {
+      if (isPaused) {
+        setCurrentQueueIndex(i);
+        break;
+      }
+      
+      const item = batchQueue[i];
+      const itemTool = tools.find(t => t.id === item.toolId) || tool;
+      
       // Update status to processing
       setProcessingFiles(prev => {
         const updated = new Map(prev);
-        updated.set(file.name, { ...updated.get(file.name)!, status: "processing" });
+        updated.set(item.id, { ...updated.get(item.id)!, status: "processing" });
         return updated;
       });
+      
+      setBatchQueue(prev => prev.map(q => 
+        q.id === item.id ? { ...q, status: "processing" as const } : q
+      ));
 
       // Track conversion if logged in
       let conversionId: string | null = null;
       if (user) {
         const conversion = await addConversion({
-          original_filename: file.name,
-          original_format: getFileExtension(file.name),
-          output_format: tool.outputFormat,
-          file_size: file.size,
+          original_filename: item.file.name,
+          original_format: getFileExtension(item.file.name),
+          output_format: itemTool.outputFormat,
+          file_size: item.file.size,
           output_size: null,
           status: "processing",
-          tool_used: tool.id,
+          tool_used: itemTool.id,
         });
         if (conversion) conversionId = conversion.id;
       }
 
       // Simulate processing with progress updates
       for (let progress = 0; progress <= 100; progress += 10) {
-        await new Promise(resolve => setTimeout(resolve, 150));
+        if (isPaused) break;
+        await new Promise(resolve => setTimeout(resolve, 100));
         setProcessingFiles(prev => {
           const updated = new Map(prev);
-          const current = updated.get(file.name)!;
-          updated.set(file.name, { ...current, progress });
+          const current = updated.get(item.id)!;
+          updated.set(item.id, { ...current, progress });
           return updated;
         });
       }
 
-      // Mark as completed
-      const outputSize = Math.floor(file.size * (Math.random() * 0.3 + 0.5)); // Simulated output size
-      setProcessingFiles(prev => {
-        const updated = new Map(prev);
-        updated.set(file.name, { 
-          ...updated.get(file.name)!, 
-          status: "completed", 
-          progress: 100,
-          outputUrl: URL.createObjectURL(file) // In real app, this would be the converted file
+      if (!isPaused) {
+        // Mark as completed
+        const outputSize = Math.floor(item.file.size * (Math.random() * 0.3 + 0.5));
+        setProcessingFiles(prev => {
+          const updated = new Map(prev);
+          updated.set(item.id, { 
+            ...updated.get(item.id)!, 
+            status: "completed", 
+            progress: 100,
+            outputUrl: URL.createObjectURL(item.file)
+          });
+          return updated;
         });
-        return updated;
-      });
+        
+        setBatchQueue(prev => prev.map(q => 
+          q.id === item.id ? { ...q, status: "completed" as const } : q
+        ));
 
-      // Update conversion record
-      if (conversionId) {
-        await updateConversion(conversionId, {
-          status: "completed",
-          output_size: outputSize,
-          completed_at: new Date().toISOString(),
-        });
+        // Update conversion record
+        if (conversionId) {
+          await updateConversion(conversionId, {
+            status: "completed",
+            output_size: outputSize,
+            completed_at: new Date().toISOString(),
+          });
+        }
       }
     }
 
-    setIsProcessing(false);
-    toast({
-      title: "Processing Complete",
-      description: `${files.length} file(s) processed successfully`,
-    });
+    if (!isPaused) {
+      setIsProcessing(false);
+      setCurrentQueueIndex(0);
+      toast({
+        title: "Processing Complete",
+        description: `${batchQueue.length} file(s) processed successfully`,
+      });
+    }
+  };
+
+  const togglePause = () => {
+    setIsPaused(!isPaused);
+    if (isPaused) {
+      // Resume processing
+      processFiles();
+    }
   };
 
   const downloadFile = (processingFile: ProcessingFile) => {
