@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Layers, Scissors, Download, X, Save, 
-  GripVertical, Trash2, Plus, FileText, Loader2
+  GripVertical, Trash2, Plus, FileText, Loader2, Upload
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +30,7 @@ export const PDFMergeSplit = ({ files, mode: initialMode, onSave, onClose }: PDF
   const [pdfFiles, setPdfFiles] = useState<PDFFileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Split options
   const [splitMode, setSplitMode] = useState<"all" | "range" | "extract">("all");
@@ -117,6 +118,69 @@ export const PDFMergeSplit = ({ files, mode: initialMode, onSave, onClose }: PDF
   const removeFile = (index: number) => {
     setPdfFiles(prev => prev.filter((_, i) => i !== index));
     setMergeOrder(prev => prev.filter(i => i !== index).map(i => i > index ? i - 1 : i));
+  };
+
+  // Add more files handler
+  const handleAddFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    
+    const newFiles = Array.from(e.target.files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    if (newFiles.length === 0) {
+      toast.error("Please select PDF files");
+      return;
+    }
+
+    setLoading(true);
+    const newLoadedFiles: PDFFileItem[] = [];
+
+    for (const file of newFiles) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        const pageCount = pdfDoc.getPageCount();
+        
+        // Generate thumbnail
+        const thumbnails: string[] = [];
+        try {
+          const pdfjsLib = await import("pdfjs-dist");
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+          
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const page = await pdf.getPage(1);
+          const viewport = page.getViewport({ scale: 0.2 });
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          
+          if (context) {
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: context, viewport }).promise;
+            thumbnails.push(canvas.toDataURL("image/jpeg", 0.5));
+          }
+        } catch {
+          thumbnails.push(`data:image/svg+xml,${encodeURIComponent(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="100" height="140" viewBox="0 0 100 140">
+              <rect width="100" height="140" fill="#f3f4f6"/>
+              <text x="50" y="70" text-anchor="middle" fill="#9ca3af" font-size="12">PDF</text>
+            </svg>
+          `)}`);
+        }
+        
+        newLoadedFiles.push({ file, pageCount, thumbnails });
+      } catch (err) {
+        console.error("Error loading PDF:", file.name, err);
+        toast.error(`Failed to load ${file.name}`);
+      }
+    }
+
+    setPdfFiles(prev => [...prev, ...newLoadedFiles]);
+    setMergeOrder(prev => [...prev, ...newLoadedFiles.map((_, i) => prev.length + i)]);
+    setLoading(false);
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleMerge = async () => {
@@ -299,9 +363,27 @@ export const PDFMergeSplit = ({ files, mode: initialMode, onSave, onClose }: PDF
             <ScrollArea className="h-full">
               {mode === "merge" ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Drag to reorder. Files will be merged in this order.
-                  </p>
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm text-muted-foreground">
+                      Drag to reorder. Files will be merged in this order.
+                    </p>
+                    <label>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept=".pdf"
+                        onChange={handleAddFiles}
+                        className="hidden"
+                      />
+                      <Button variant="outline" size="sm" className="cursor-pointer" asChild>
+                        <span>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add PDFs
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
                   {mergeOrder.map((orderIdx, displayIdx) => {
                     const pdfFile = pdfFiles[orderIdx];
                     if (!pdfFile) return null;

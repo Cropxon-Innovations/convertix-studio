@@ -9,7 +9,7 @@ import {
   Play, Pause, ListOrdered, X, Mail, Scissors, RotateCw,
   FileImage, FileSpreadsheet, Presentation, Code, Shield, 
   Unlock, PenTool, Hash, Droplet, Crop, Eye, GitCompare, FileCheck,
-  SplitSquareHorizontal, FileX, FileSearch, LogIn
+  SplitSquareHorizontal, FileX, FileSearch, LogIn, CloudUpload
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useConversions } from "@/hooks/useConversions";
@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { QueuePanel } from "@/components/studio/QueuePanel";
 import { PDFPageOrganizer } from "@/components/studio/PDFPageOrganizer";
+import { PDFMergeSplit } from "@/components/studio/PDFMergeSplit";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -114,6 +115,8 @@ const DocumentStudio = () => {
   const [sendEmailNotification, setSendEmailNotification] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showPDFOrganizer, setShowPDFOrganizer] = useState(false);
+  const [showMergeSplit, setShowMergeSplit] = useState(false);
+  const [mergeSplitMode, setMergeSplitMode] = useState<"merge" | "split">("merge");
   const [selectedPDFFile, setSelectedPDFFile] = useState<File | null>(null);
   const pauseRef = useRef(false);
   const { user } = useAuth();
@@ -183,6 +186,17 @@ const DocumentStudio = () => {
     setActiveTool(toolId);
     const tool = tools.find(t => t.id === toolId);
     
+    // Handle merge/split tools
+    if ((toolId === "merge" || toolId === "split") && files.length > 0) {
+      const pdfFiles = files.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+      if (pdfFiles.length > 0) {
+        setMergeSplitMode(toolId as "merge" | "split");
+        setShowMergeSplit(true);
+        return;
+      }
+    }
+    
+    // Handle organize tool
     if (tool?.hasEditor && files.length > 0) {
       const pdfFile = files.find(f => f.name.toLowerCase().endsWith('.pdf'));
       if (pdfFile) {
@@ -480,6 +494,27 @@ const DocumentStudio = () => {
     setSelectedPDFFile(null);
   };
 
+  const handleMergeSplitSave = (results: { blob: Blob; name: string }[]) => {
+    results.forEach(({ blob, name }) => {
+      const url = URL.createObjectURL(blob);
+      const file = new File([blob], name, { type: 'application/pdf' });
+      
+      setProcessingFiles(prev => {
+        const updated = new Map(prev);
+        updated.set(name, {
+          file,
+          progress: 100,
+          status: "completed",
+          outputUrl: url,
+          outputSize: blob.size,
+        });
+        return updated;
+      });
+    });
+    
+    setShowMergeSplit(false);
+  };
+
   const getStatusIcon = (status: ProcessingFile["status"]) => {
     switch (status) {
       case "completed": return <CheckCircle className="h-4 w-4 text-primary" />;
@@ -585,11 +620,25 @@ const DocumentStudio = () => {
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
-              className={`flex-1 rounded-xl border-2 border-dashed transition-colors flex items-center justify-center bg-card/30 ${
-                isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+              className={`flex-1 rounded-xl border-2 border-dashed transition-all flex items-center justify-center bg-card/30 ${
+                isDragging 
+                  ? 'border-primary bg-primary/10 scale-[1.02]' 
+                  : 'border-border hover:border-primary/50'
               }`}
             >
-              {files.length === 0 ? (
+              {isDragging ? (
+                <div className="text-center max-w-md px-6 animate-fade-in">
+                  <div className="w-20 h-20 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto mb-6 animate-scale-in">
+                    <CloudUpload className="h-12 w-12 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-primary mb-2">
+                    Drop to upload
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Release to add files
+                  </p>
+                </div>
+              ) : files.length === 0 ? (
                 <div className="text-center max-w-md px-6">
                   <div className="w-16 md:w-20 h-16 md:h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 md:mb-6">
                     <Upload className="h-8 md:h-10 w-8 md:w-10 text-primary" />
@@ -782,6 +831,16 @@ const DocumentStudio = () => {
             setShowPDFOrganizer(false);
             setSelectedPDFFile(null);
           }}
+        />
+      )}
+
+      {/* PDF Merge/Split */}
+      {showMergeSplit && files.length > 0 && (
+        <PDFMergeSplit
+          files={files.filter(f => f.name.toLowerCase().endsWith('.pdf'))}
+          mode={mergeSplitMode}
+          onSave={handleMergeSplitSave}
+          onClose={() => setShowMergeSplit(false)}
         />
       )}
 
