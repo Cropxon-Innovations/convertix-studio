@@ -1,7 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { label: "Studio", href: "/studio" },
@@ -13,14 +14,30 @@ const navItems = [
 export const Header = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, signOut, loading } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    setMobileMenuOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <span className="text-xl font-semibold tracking-tight text-foreground">
-            CONVERTIX
-          </span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm">C</span>
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-lg font-bold tracking-tight text-foreground">
+                Convertix
+              </span>
+              <span className="text-[10px] text-muted-foreground tracking-wider uppercase">
+                by CropXon
+              </span>
+            </div>
+          </div>
         </Link>
 
         {/* Desktop Navigation */}
@@ -41,12 +58,30 @@ export const Header = () => {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/signin">Sign in</Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link to="/studio">Open Studio</Link>
-          </Button>
+          {!loading && (
+            <>
+              {user ? (
+                <>
+                  <span className="text-sm text-muted-foreground">
+                    {user.email}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/signin">Sign in</Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link to="/studio">Open Studio</Link>
+                  </Button>
+                </>
+              )}
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -82,16 +117,30 @@ export const Header = () => {
               </Link>
             ))}
             <div className="flex flex-col gap-2 pt-4 border-t border-border/50 mt-2">
-              <Button variant="ghost" size="sm" asChild className="justify-start">
-                <Link to="/signin" onClick={() => setMobileMenuOpen(false)}>
-                  Sign in
-                </Link>
-              </Button>
-              <Button size="sm" asChild>
-                <Link to="/studio" onClick={() => setMobileMenuOpen(false)}>
-                  Open Studio
-                </Link>
-              </Button>
+              {user ? (
+                <>
+                  <span className="px-4 text-sm text-muted-foreground">
+                    {user.email}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={handleSignOut} className="justify-start">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" asChild className="justify-start">
+                    <Link to="/signin" onClick={() => setMobileMenuOpen(false)}>
+                      Sign in
+                    </Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link to="/studio" onClick={() => setMobileMenuOpen(false)}>
+                      Open Studio
+                    </Link>
+                  </Button>
+                </>
+              )}
             </div>
           </nav>
         </div>

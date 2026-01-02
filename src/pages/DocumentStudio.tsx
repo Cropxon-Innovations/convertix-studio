@@ -6,6 +6,8 @@ import {
   FileOutput, Minimize2, Type, Layers, Trash2,
   Lock, ChevronRight
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const tools = [
   { id: "convert", label: "Convert", icon: FileOutput, description: "PDF, DOCX, TXT, and more" },
@@ -16,13 +18,26 @@ const tools = [
 
 const DocumentStudio = () => {
   const [files, setFiles] = useState<File[]>([]);
-  const [isLoggedIn] = useState(false);
   const [activeTool, setActiveTool] = useState("convert");
+  const [isDragging, setIsDragging] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    setIsDragging(false);
     const droppedFiles = Array.from(e.dataTransfer.files);
     setFiles(prev => [...prev, ...droppedFiles]);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
   }, []);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,6 +49,14 @@ const DocumentStudio = () => {
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
@@ -60,12 +83,17 @@ const DocumentStudio = () => {
                 files.map((file, index) => (
                   <div
                     key={index}
-                    className="group flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/50 hover:bg-accent transition-colors"
+                    className="group flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/50 hover:bg-accent transition-colors animate-fade-in"
                   >
                     <FileText className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-sm text-foreground truncate flex-1">
-                      {file.name}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-foreground truncate block">
+                        {file.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatFileSize(file.size)}
+                      </span>
+                    </div>
                     <button
                       onClick={() => removeFile(index)}
                       className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded transition-opacity"
@@ -82,7 +110,7 @@ const DocumentStudio = () => {
               <p className="text-xs text-muted-foreground mb-2">Session</p>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
-                <span>Temporary (not saved)</span>
+                <span>{user ? 'Auto-saving enabled' : 'Temporary (not saved)'}</span>
               </div>
             </div>
           </aside>
@@ -92,16 +120,21 @@ const DocumentStudio = () => {
             {/* Drop Zone */}
             <div
               onDrop={handleDrop}
-              onDragOver={(e) => e.preventDefault()}
-              className="flex-1 rounded-xl border-2 border-dashed border-border hover:border-primary/50 transition-colors flex items-center justify-center bg-card/30"
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              className={`flex-1 rounded-xl border-2 border-dashed transition-all duration-300 flex items-center justify-center bg-card/30 ${
+                isDragging 
+                  ? 'border-primary bg-primary/5 scale-[1.02]' 
+                  : 'border-border hover:border-primary/50'
+              }`}
             >
               {files.length === 0 ? (
                 <div className="text-center max-w-md px-6">
-                  <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
-                    <Upload className="h-10 w-10 text-primary" />
+                  <div className={`w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6 transition-transform duration-300 ${isDragging ? 'scale-110' : ''}`}>
+                    <Upload className={`h-10 w-10 text-primary transition-transform duration-300 ${isDragging ? 'animate-bounce' : ''}`} />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Drop documents here
+                    {isDragging ? 'Drop your files here' : 'Drop documents here'}
                   </h3>
                   <p className="text-muted-foreground mb-6">
                     PDF, Word, Excel, PowerPoint, and more
@@ -191,7 +224,7 @@ const DocumentStudio = () => {
             <div className="flex-1" />
             
             <div className="pt-4 border-t border-border/50">
-              {isLoggedIn ? (
+              {user ? (
                 <Button variant="outline" className="w-full" disabled={files.length === 0}>
                   <Download className="mr-2 h-4 w-4" />
                   Download All
@@ -202,7 +235,7 @@ const DocumentStudio = () => {
                   <p className="text-sm text-muted-foreground mb-3">
                     Sign in to download and save your work
                   </p>
-                  <Button size="sm" className="w-full">
+                  <Button size="sm" className="w-full" onClick={() => navigate('/signin')}>
                     Sign In
                   </Button>
                 </div>
@@ -221,7 +254,7 @@ const DocumentStudio = () => {
           <div className="flex items-center gap-2">
             <Tag className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
-              {isLoggedIn ? 'Auto-saving' : 'Not saved'}
+              {user ? 'Auto-saving' : 'Not saved'}
             </span>
           </div>
         </div>
