@@ -5,7 +5,10 @@ import {
   FileText, Upload, Download, Clock, Tag, 
   FileOutput, Minimize2, Type, Layers, Trash2,
   Lock, ChevronRight, CheckCircle, AlertCircle, Loader2, History,
-  Play, Pause, ListOrdered, X, Mail
+  Play, Pause, ListOrdered, X, Mail, Scissors, RotateCw,
+  FileImage, FileSpreadsheet, Presentation, Code, Shield, 
+  Unlock, PenTool, Hash, Droplet, Crop, Eye, GitCompare, FileCheck,
+  SplitSquareHorizontal, FileX, FileSearch
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useConversions } from "@/hooks/useConversions";
@@ -16,12 +19,58 @@ import { QueuePanel } from "@/components/studio/QueuePanel";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// Tool categories matching iLovePDF
+const toolCategories = [
+  { id: "all", label: "All Tools" },
+  { id: "organize", label: "Organize" },
+  { id: "optimize", label: "Optimize" },
+  { id: "convert-to", label: "Convert to PDF" },
+  { id: "convert-from", label: "Convert from PDF" },
+  { id: "edit", label: "Edit" },
+  { id: "security", label: "Security" },
+];
 
 const tools = [
-  { id: "convert", label: "Convert", icon: FileOutput, description: "PDF, DOCX, TXT, and more", outputFormat: "docx", conversionType: "pdf-to-docx" },
-  { id: "compress", label: "Compress", icon: Minimize2, description: "Reduce file size", outputFormat: "compressed", conversionType: "compress-image" },
-  { id: "ocr", label: "OCR", icon: Type, description: "Extract text from images", outputFormat: "txt", conversionType: "ocr" },
-  { id: "merge", label: "Merge", icon: Layers, description: "Combine multiple files", outputFormat: "pdf", conversionType: "merge" },
+  // Organize PDF
+  { id: "merge", label: "Merge PDF", icon: Layers, description: "Combine multiple PDFs into one", outputFormat: "pdf", conversionType: "merge", category: "organize" },
+  { id: "split", label: "Split PDF", icon: SplitSquareHorizontal, description: "Separate PDF into multiple files", outputFormat: "pdf", conversionType: "split", category: "organize" },
+  { id: "remove-pages", label: "Remove Pages", icon: FileX, description: "Delete specific pages from PDF", outputFormat: "pdf", conversionType: "remove-pages", category: "organize" },
+  { id: "extract-pages", label: "Extract Pages", icon: FileSearch, description: "Extract specific pages as new PDF", outputFormat: "pdf", conversionType: "extract-pages", category: "organize" },
+  { id: "organize", label: "Organize PDF", icon: Layers, description: "Reorder, rotate, delete pages", outputFormat: "pdf", conversionType: "organize", category: "organize" },
+  
+  // Optimize PDF
+  { id: "compress", label: "Compress PDF", icon: Minimize2, description: "Reduce PDF file size", outputFormat: "pdf", conversionType: "compress-pdf", category: "optimize" },
+  { id: "repair", label: "Repair PDF", icon: FileCheck, description: "Fix corrupted PDF files", outputFormat: "pdf", conversionType: "repair", category: "optimize" },
+  { id: "ocr", label: "OCR PDF", icon: Type, description: "Make scanned PDFs searchable", outputFormat: "pdf", conversionType: "ocr", category: "optimize" },
+  
+  // Convert to PDF
+  { id: "jpg-to-pdf", label: "JPG to PDF", icon: FileImage, description: "Convert images to PDF", outputFormat: "pdf", conversionType: "jpg-to-pdf", category: "convert-to" },
+  { id: "word-to-pdf", label: "Word to PDF", icon: FileText, description: "Convert DOCX to PDF", outputFormat: "pdf", conversionType: "word-to-pdf", category: "convert-to" },
+  { id: "ppt-to-pdf", label: "PowerPoint to PDF", icon: Presentation, description: "Convert PPTX to PDF", outputFormat: "pdf", conversionType: "ppt-to-pdf", category: "convert-to" },
+  { id: "excel-to-pdf", label: "Excel to PDF", icon: FileSpreadsheet, description: "Convert XLSX to PDF", outputFormat: "pdf", conversionType: "excel-to-pdf", category: "convert-to" },
+  { id: "html-to-pdf", label: "HTML to PDF", icon: Code, description: "Convert webpage to PDF", outputFormat: "pdf", conversionType: "html-to-pdf", category: "convert-to" },
+  
+  // Convert from PDF
+  { id: "pdf-to-jpg", label: "PDF to JPG", icon: FileImage, description: "Convert PDF to images", outputFormat: "jpg", conversionType: "pdf-to-jpg", category: "convert-from" },
+  { id: "pdf-to-word", label: "PDF to Word", icon: FileText, description: "Convert PDF to DOCX", outputFormat: "docx", conversionType: "pdf-to-docx", category: "convert-from" },
+  { id: "pdf-to-ppt", label: "PDF to PowerPoint", icon: Presentation, description: "Convert PDF to PPTX", outputFormat: "pptx", conversionType: "pdf-to-ppt", category: "convert-from" },
+  { id: "pdf-to-excel", label: "PDF to Excel", icon: FileSpreadsheet, description: "Convert PDF to XLSX", outputFormat: "xlsx", conversionType: "pdf-to-excel", category: "convert-from" },
+  
+  // Edit PDF
+  { id: "rotate", label: "Rotate PDF", icon: RotateCw, description: "Rotate PDF pages", outputFormat: "pdf", conversionType: "rotate", category: "edit" },
+  { id: "add-page-numbers", label: "Add Page Numbers", icon: Hash, description: "Add page numbers to PDF", outputFormat: "pdf", conversionType: "add-page-numbers", category: "edit" },
+  { id: "add-watermark", label: "Add Watermark", icon: Droplet, description: "Add text/image watermark", outputFormat: "pdf", conversionType: "add-watermark", category: "edit" },
+  { id: "crop", label: "Crop PDF", icon: Crop, description: "Crop PDF page margins", outputFormat: "pdf", conversionType: "crop-pdf", category: "edit" },
+  { id: "edit-pdf", label: "Edit PDF", icon: PenTool, description: "Edit text and images in PDF", outputFormat: "pdf", conversionType: "edit-pdf", category: "edit" },
+  
+  // PDF Security
+  { id: "unlock", label: "Unlock PDF", icon: Unlock, description: "Remove PDF password", outputFormat: "pdf", conversionType: "unlock", category: "security" },
+  { id: "protect", label: "Protect PDF", icon: Shield, description: "Add password protection", outputFormat: "pdf", conversionType: "protect", category: "security" },
+  { id: "sign", label: "Sign PDF", icon: PenTool, description: "Add digital signature", outputFormat: "pdf", conversionType: "sign", category: "security" },
+  { id: "redact", label: "Redact PDF", icon: Eye, description: "Black out sensitive info", outputFormat: "pdf", conversionType: "redact", category: "security" },
+  { id: "compare", label: "Compare PDF", icon: GitCompare, description: "Compare two PDF files", outputFormat: "pdf", conversionType: "compare", category: "security" },
 ];
 
 interface ProcessingFile {
@@ -42,7 +91,8 @@ interface BatchQueueItem {
 
 const DocumentStudio = () => {
   const [files, setFiles] = useState<File[]>([]);
-  const [activeTool, setActiveTool] = useState("convert");
+  const [activeTool, setActiveTool] = useState("merge");
+  const [activeCategory, setActiveCategory] = useState("all");
   const [isDragging, setIsDragging] = useState(false);
   const [processingFiles, setProcessingFiles] = useState<Map<string, ProcessingFile>>(new Map());
   const [isProcessing, setIsProcessing] = useState(false);
@@ -57,6 +107,11 @@ const DocumentStudio = () => {
   const { conversions, addConversion, updateConversion } = useConversions();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Filter tools by category
+  const filteredTools = activeCategory === "all" 
+    ? tools 
+    : tools.filter(t => t.category === activeCategory);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -577,12 +632,31 @@ const DocumentStudio = () => {
           </main>
 
           {/* Right Sidebar - Tools */}
-          <aside className="w-64 md:w-72 border-l border-border/50 bg-card/50 p-4 hidden md:flex flex-col">
-            <h3 className="text-sm font-medium text-foreground mb-4">Tools</h3>
+          <aside className="w-64 md:w-80 border-l border-border/50 bg-card/50 p-4 hidden md:flex flex-col">
+            <h3 className="text-sm font-medium text-foreground mb-3">Tools</h3>
+
+            {/* Category Tabs */}
+            <div className="mb-4 overflow-x-auto pb-2">
+              <div className="flex gap-1 min-w-max">
+                {toolCategories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={`px-3 py-1.5 text-xs rounded-full whitespace-nowrap transition-all ${
+                      activeCategory === cat.id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Tool List */}
-            <div className="space-y-2 mb-6">
-              {tools.map((tool) => {
+            <div className="flex-1 overflow-y-auto space-y-1 mb-4 max-h-[40vh]">
+              {filteredTools.map((tool) => {
                 const Icon = tool.icon;
                 const isActive = activeTool === tool.id;
                 return (
@@ -590,13 +664,13 @@ const DocumentStudio = () => {
                     key={tool.id}
                     onClick={() => setActiveTool(tool.id)}
                     disabled={isProcessing}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 text-left group ${
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-left group ${
                       isActive
                         ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02]'
                         : 'hover:bg-accent text-foreground hover:scale-[1.01]'
                     } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    <Icon className={`h-5 w-5 shrink-0 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+                    <Icon className={`h-4 w-4 shrink-0 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{tool.label}</p>
                       <p className={`text-xs truncate ${isActive ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
