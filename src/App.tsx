@@ -21,6 +21,7 @@ import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import CookiePolicyPage from "./pages/CookiePolicyPage";
 import TermsPage from "./pages/TermsPage";
 import RefundPolicyPage from "./pages/RefundPolicyPage";
+import ProfilePage from "./pages/ProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,11 @@ const App = () => (
             <Route path="/cookies" element={<CookiePolicyPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/refund" element={<RefundPolicyPage />} />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

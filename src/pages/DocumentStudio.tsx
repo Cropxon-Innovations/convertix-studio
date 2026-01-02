@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { QueuePanel } from "@/components/studio/QueuePanel";
+import { supabase } from "@/integrations/supabase/client";
 
 const tools = [
   { id: "convert", label: "Convert", icon: FileOutput, description: "PDF, DOCX, TXT, and more", outputFormat: "docx" },
