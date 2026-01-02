@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, User } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { ConvertixLogo } from "@/components/ui/ConvertixLogo";
@@ -51,9 +51,12 @@ export const Header = () => {
             <>
               {user ? (
                 <>
-                  <span className="text-sm text-muted-foreground">
-                    {user.email}
-                  </span>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/profile">
+                      <User className="h-4 w-4 mr-2" />
+                      Profile
+                    </Link>
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={handleSignOut}>
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign out
@@ -108,9 +111,12 @@ export const Header = () => {
             <div className="flex flex-col gap-2 pt-4 border-t border-border/50 mt-2">
               {user ? (
                 <>
-                  <span className="px-4 text-sm text-muted-foreground">
-                    {user.email}
-                  </span>
+                  <Button variant="ghost" size="sm" asChild className="justify-start">
+                    <Link to="/profile" onClick={() => setMobileMenuOpen(false)}>
+                      <User className="h-4 w-4 mr-2" />
+                      Profile
+                    </Link>
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={handleSignOut} className="justify-start">
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign out

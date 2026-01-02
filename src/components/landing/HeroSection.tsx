@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Play, Download, ArrowRight, FileText, Image, Sparkles, Check, Zap, RefreshCw, Crop, Palette, Type } from "lucide-react";
 import { useState, useEffect } from "react";
+import { VideoDialog } from "@/components/ui/VideoDialog";
 
 const demoSteps = [
   {
@@ -41,6 +42,9 @@ export const HeroSection = () => {
   const [showReal, setShowReal] = useState(false);
   const [sketchProgress, setSketchProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [showVideoDialog, setShowVideoDialog] = useState(false);
+  
+  const videoUrl = "https://cnxhrplbzrmfaihizpjd.supabase.co/storage/v1/object/public/convertix/CONVERTIX.mp4";
 
   useEffect(() => {
     // Start sketch animation after a delay
@@ -128,7 +132,7 @@ export const HeroSection = () => {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="min-w-[160px]">
+            <Button size="lg" variant="outline" className="min-w-[160px]" onClick={() => setShowVideoDialog(true)}>
               <Play className="mr-2 h-4 w-4" />
               Watch Demo
             </Button>
@@ -391,6 +395,13 @@ export const HeroSection = () => {
           100% { width: 100%; }
         }
       `}</style>
+      
+      {/* Video Dialog */}
+      <VideoDialog 
+        open={showVideoDialog} 
+        onOpenChange={setShowVideoDialog} 
+        videoUrl={videoUrl} 
+      />
     </section>
   );
 };
