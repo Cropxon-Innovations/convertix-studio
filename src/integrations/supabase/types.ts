@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      conversions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          file_size: number
+          id: string
+          original_filename: string
+          original_format: string
+          output_format: string
+          output_size: number | null
+          status: string
+          tool_used: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          file_size: number
+          id?: string
+          original_filename: string
+          original_format: string
+          output_format: string
+          output_size?: number | null
+          status?: string
+          tool_used: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          file_size?: number
+          id?: string
+          original_filename?: string
+          original_format?: string
+          output_format?: string
+          output_size?: number | null
+          status?: string
+          tool_used?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

@@ -1,19 +1,14 @@
 import { Link } from "react-router-dom";
+import { ConvertixLogo } from "@/components/ui/ConvertixLogo";
 
 export const Footer = () => {
   return (
     <footer className="border-t border-border/50 bg-card/50">
-      <div className="container py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="container py-8 md:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">
           <div className="md:col-span-2">
-            <Link to="/" className="inline-flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">C</span>
-              </div>
-              <div className="flex flex-col leading-none">
-                <span className="text-lg font-bold text-foreground">Convertix</span>
-                <span className="text-[10px] text-muted-foreground tracking-wider uppercase">by CropXon</span>
-              </div>
+            <Link to="/" className="inline-block mb-4">
+              <ConvertixLogo size="md" />
             </Link>
             <p className="text-sm text-muted-foreground max-w-sm">
               A persistent conversion studio for documents, images, and data. 

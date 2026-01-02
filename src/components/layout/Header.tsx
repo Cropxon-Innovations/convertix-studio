@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { ConvertixLogo } from "@/components/ui/ConvertixLogo";
 
 const navItems = [
   { label: "Studio", href: "/studio" },
@@ -24,20 +25,8 @@ export const Header = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">C</span>
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-lg font-bold tracking-tight text-foreground">
-                Convertix
-              </span>
-              <span className="text-[10px] text-muted-foreground tracking-wider uppercase">
-                by CropXon
-              </span>
-            </div>
-          </div>
+        <Link to="/" className="flex items-center gap-2 group">
+          <ConvertixLogo size="md" />
         </Link>
 
         {/* Desktop Navigation */}
