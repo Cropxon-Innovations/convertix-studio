@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PDFDocument, degrees } from "pdf-lib";
-import * as pdfjsLib from "pdfjs-dist";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -8,9 +7,6 @@ import {
   ChevronLeft, ZoomIn, ZoomOut, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
-
-// Set up pdf.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 interface PDFPage {
   index: number;
@@ -74,10 +70,14 @@ export const PDFPageOrganizer = ({ pdfFile, onSave, onClose }: PDFPageOrganizerP
 
   const generateRealThumbnails = async (arrayBuffer: ArrayBuffer, pageCount: number) => {
     try {
+      // Dynamically import pdf.js to avoid top-level await issues
+      const pdfjsLib = await import("pdfjs-dist");
+      
+      // Set up worker
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+      
       // Load PDF with pdf.js
       const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      
-      const thumbnails: string[] = [];
       
       for (let i = 1; i <= pageCount; i++) {
         const page = await pdfDoc.getPage(i);
@@ -100,7 +100,6 @@ export const PDFPageOrganizer = ({ pdfFile, onSave, onClose }: PDFPageOrganizerP
         
         // Convert to data URL
         const thumbnail = canvas.toDataURL("image/jpeg", 0.7);
-        thumbnails.push(thumbnail);
         
         // Update pages with thumbnail as we go
         setPages(prev => prev.map((p, idx) => 
