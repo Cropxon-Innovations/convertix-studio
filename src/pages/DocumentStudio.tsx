@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { StudioLayout } from "@/components/layout/StudioLayout";
 import { Button } from "@/components/ui/button";
 import { 
   FileText, Upload, Download, Clock, Tag, 
   FileOutput, Minimize2, Type, Layers, Trash2,
   Lock, ChevronRight, CheckCircle, AlertCircle, Loader2, History,
-  Play, Pause, ListOrdered, X
+  Play, Pause, ListOrdered, X, Mail
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useConversions } from "@/hooks/useConversions";
@@ -14,12 +14,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { QueuePanel } from "@/components/studio/QueuePanel";
 import { supabase } from "@/integrations/supabase/client";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const tools = [
-  { id: "convert", label: "Convert", icon: FileOutput, description: "PDF, DOCX, TXT, and more", outputFormat: "docx" },
-  { id: "compress", label: "Compress", icon: Minimize2, description: "Reduce file size", outputFormat: "compressed" },
-  { id: "ocr", label: "OCR", icon: Type, description: "Extract text from images", outputFormat: "txt" },
-  { id: "merge", label: "Merge", icon: Layers, description: "Combine multiple files", outputFormat: "pdf" },
+  { id: "convert", label: "Convert", icon: FileOutput, description: "PDF, DOCX, TXT, and more", outputFormat: "docx", conversionType: "pdf-to-docx" },
+  { id: "compress", label: "Compress", icon: Minimize2, description: "Reduce file size", outputFormat: "compressed", conversionType: "compress-image" },
+  { id: "ocr", label: "OCR", icon: Type, description: "Extract text from images", outputFormat: "txt", conversionType: "ocr" },
+  { id: "merge", label: "Merge", icon: Layers, description: "Combine multiple files", outputFormat: "pdf", conversionType: "merge" },
 ];
 
 interface ProcessingFile {
@@ -28,6 +30,7 @@ interface ProcessingFile {
   status: "queued" | "pending" | "processing" | "completed" | "failed" | "paused";
   outputUrl?: string;
   queuePosition?: number;
+  outputSize?: number;
 }
 
 interface BatchQueueItem {
@@ -48,6 +51,8 @@ const DocumentStudio = () => {
   const [showQueue, setShowQueue] = useState(false);
   const [batchQueue, setBatchQueue] = useState<BatchQueueItem[]>([]);
   const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
+  const [sendEmailNotification, setSendEmailNotification] = useState(false);
+  const pauseRef = useRef(false);
   const { user } = useAuth();
   const { conversions, addConversion, updateConversion } = useConversions();
   const navigate = useNavigate();
@@ -132,6 +137,21 @@ const DocumentStudio = () => {
     setCurrentQueueIndex(0);
   };
 
+  const uploadFileToStorage = async (file: File): Promise<string> => {
+    const fileName = `uploads/${Date.now()}_${file.name}`;
+    const { data, error } = await supabase.storage
+      .from("convertix")
+      .upload(fileName, file, { upsert: true });
+    
+    if (error) throw new Error(`Upload failed: ${error.message}`);
+    
+    const { data: urlData } = supabase.storage
+      .from("convertix")
+      .getPublicUrl(fileName);
+    
+    return urlData.publicUrl;
+  };
+
   const processFiles = async () => {
     if (files.length === 0 && batchQueue.length === 0) return;
     
@@ -143,6 +163,7 @@ const DocumentStudio = () => {
     
     setIsProcessing(true);
     setIsPaused(false);
+    pauseRef.current = false;
     
     const tool = tools.find(t => t.id === activeTool);
     if (!tool) return;
@@ -161,7 +182,7 @@ const DocumentStudio = () => {
 
     // Process queue
     for (let i = currentQueueIndex; i < batchQueue.length; i++) {
-      if (isPaused) {
+      if (pauseRef.current) {
         setCurrentQueueIndex(i);
         break;
       }
@@ -172,7 +193,7 @@ const DocumentStudio = () => {
       // Update status to processing
       setProcessingFiles(prev => {
         const updated = new Map(prev);
-        updated.set(item.id, { ...updated.get(item.id)!, status: "processing" });
+        updated.set(item.id, { ...updated.get(item.id)!, status: "processing", progress: 10 });
         return updated;
       });
       
@@ -195,28 +216,54 @@ const DocumentStudio = () => {
         if (conversion) conversionId = conversion.id;
       }
 
-      // Simulate processing with progress updates
-      for (let progress = 0; progress <= 100; progress += 10) {
-        if (isPaused) break;
-        await new Promise(resolve => setTimeout(resolve, 100));
+      try {
+        // Upload file to storage
         setProcessingFiles(prev => {
           const updated = new Map(prev);
-          const current = updated.get(item.id)!;
-          updated.set(item.id, { ...current, progress });
+          updated.set(item.id, { ...updated.get(item.id)!, progress: 20 });
           return updated;
         });
-      }
 
-      if (!isPaused) {
-        // Mark as completed
-        const outputSize = Math.floor(item.file.size * (Math.random() * 0.3 + 0.5));
+        const fileUrl = await uploadFileToStorage(item.file);
+        
+        setProcessingFiles(prev => {
+          const updated = new Map(prev);
+          updated.set(item.id, { ...updated.get(item.id)!, progress: 40 });
+          return updated;
+        });
+
+        // Call the edge function for actual conversion
+        const { data, error } = await supabase.functions.invoke("convert-file", {
+          body: {
+            fileUrl,
+            fileName: item.file.name,
+            conversionType: itemTool.conversionType,
+            userEmail: sendEmailNotification && user?.email ? user.email : undefined,
+            sendNotification: sendEmailNotification && !!user?.email,
+          },
+        });
+
+        setProcessingFiles(prev => {
+          const updated = new Map(prev);
+          updated.set(item.id, { ...updated.get(item.id)!, progress: 80 });
+          return updated;
+        });
+
+        if (error) throw error;
+        
+        if (!data.success) {
+          throw new Error(data.error || "Conversion failed");
+        }
+
+        // Mark as completed with real output URL
         setProcessingFiles(prev => {
           const updated = new Map(prev);
           updated.set(item.id, { 
             ...updated.get(item.id)!, 
             status: "completed", 
             progress: 100,
-            outputUrl: URL.createObjectURL(item.file)
+            outputUrl: data.outputUrl,
+            outputSize: data.outputSize,
           });
           return updated;
         });
@@ -229,26 +276,60 @@ const DocumentStudio = () => {
         if (conversionId) {
           await updateConversion(conversionId, {
             status: "completed",
-            output_size: outputSize,
+            output_size: data.outputSize,
             completed_at: new Date().toISOString(),
           });
         }
+      } catch (err) {
+        console.error("Processing error:", err);
+        
+        // Mark as failed
+        setProcessingFiles(prev => {
+          const updated = new Map(prev);
+          updated.set(item.id, { 
+            ...updated.get(item.id)!, 
+            status: "failed", 
+            progress: 0,
+          });
+          return updated;
+        });
+        
+        setBatchQueue(prev => prev.map(q => 
+          q.id === item.id ? { ...q, status: "failed" as const } : q
+        ));
+
+        // Update conversion record as failed
+        if (conversionId) {
+          await updateConversion(conversionId, {
+            status: "failed",
+          });
+        }
+
+        toast({
+          title: "Conversion Failed",
+          description: err instanceof Error ? err.message : "Unknown error occurred",
+          variant: "destructive",
+        });
       }
     }
 
-    if (!isPaused) {
+    if (!pauseRef.current) {
       setIsProcessing(false);
       setCurrentQueueIndex(0);
-      toast({
-        title: "Processing Complete",
-        description: `${batchQueue.length} file(s) processed successfully`,
-      });
+      const successCount = Array.from(processingFiles.values()).filter(f => f.status === "completed").length;
+      if (successCount > 0) {
+        toast({
+          title: "Processing Complete",
+          description: `${successCount} file(s) processed successfully`,
+        });
+      }
     }
   };
 
   const togglePause = () => {
+    pauseRef.current = !pauseRef.current;
     setIsPaused(!isPaused);
-    if (isPaused) {
+    if (pauseRef.current === false && isPaused) {
       // Resume processing
       processFiles();
     }
@@ -566,6 +647,23 @@ const DocumentStudio = () => {
                 </>
               )}
             </Button>
+
+            {/* Email Notification Toggle */}
+            {user && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30 mb-4">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="email-notify" className="text-sm text-foreground cursor-pointer">
+                    Email on complete
+                  </Label>
+                </div>
+                <Switch
+                  id="email-notify"
+                  checked={sendEmailNotification}
+                  onCheckedChange={setSendEmailNotification}
+                />
+              </div>
+            )}
 
             {/* Download Section */}
             <div className="flex-1" />
