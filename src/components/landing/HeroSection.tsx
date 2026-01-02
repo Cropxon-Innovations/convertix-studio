@@ -1,11 +1,46 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Play, Download, ArrowRight, FileText, Image, Sparkles } from "lucide-react";
+import { Play, Download, ArrowRight, FileText, Image, Sparkles, Check, Zap, RefreshCw, Crop, Palette, Type } from "lucide-react";
 import { useState, useEffect } from "react";
 
+const demoSteps = [
+  {
+    title: "Upload Document",
+    description: "Invoice.pdf uploaded",
+    type: "document",
+    action: "Analyzing...",
+  },
+  {
+    title: "OCR Processing",
+    description: "Extracting text from PDF",
+    type: "process",
+    action: "Reading content...",
+  },
+  {
+    title: "Convert Format",
+    description: "PDF → DOCX",
+    type: "convert",
+    action: "Converting...",
+  },
+  {
+    title: "Image Optimization",
+    description: "Banner.png optimizing",
+    type: "image",
+    action: "Compressing...",
+  },
+  {
+    title: "Apply Edits",
+    description: "Resize & enhance",
+    type: "edit",
+    action: "Processing...",
+  },
+];
+
 export const HeroSection = () => {
+  const [currentStep, setCurrentStep] = useState(0);
   const [showReal, setShowReal] = useState(false);
   const [sketchProgress, setSketchProgress] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
 
   useEffect(() => {
     // Start sketch animation after a delay
@@ -32,6 +67,28 @@ export const HeroSection = () => {
       clearTimeout(realTimer);
     };
   }, []);
+
+  // Cycle through demo steps
+  useEffect(() => {
+    if (!showReal || !isPlaying) return;
+    
+    const stepInterval = setInterval(() => {
+      setCurrentStep(prev => (prev + 1) % demoSteps.length);
+    }, 2500);
+
+    return () => clearInterval(stepInterval);
+  }, [showReal, isPlaying]);
+
+  const getStepIcon = (type: string) => {
+    switch (type) {
+      case "document": return FileText;
+      case "process": return Type;
+      case "convert": return RefreshCw;
+      case "image": return Image;
+      case "edit": return Crop;
+      default: return Zap;
+    }
+  };
 
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
@@ -83,121 +140,225 @@ export const HeroSection = () => {
             </Button>
           </div>
 
-          {/* Animated Demo Preview - Sketch to Real */}
-          <div className="relative max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: '0.4s' }}>
-            <div className="aspect-[16/10] rounded-xl border border-border bg-card/80 backdrop-blur shadow-xl overflow-hidden relative">
+          {/* Interactive Live Demo Preview */}
+          <div className="relative max-w-4xl mx-auto animate-fade-in" style={{ animationDelay: '0.4s' }}>
+            <div className="aspect-[16/9] rounded-xl border border-border bg-card/80 backdrop-blur shadow-xl overflow-hidden relative">
               
               {/* Sketch Layer */}
               <div 
-                className={`absolute inset-0 transition-opacity duration-1000 ${showReal ? 'opacity-0' : 'opacity-100'}`}
+                className={`absolute inset-0 transition-opacity duration-1000 ${showReal ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
               >
-                <svg viewBox="0 0 800 500" className="w-full h-full" fill="none">
+                <svg viewBox="0 0 960 540" className="w-full h-full" fill="none">
                   {/* Header sketch */}
                   <g className="sketch-draw" style={{ strokeDashoffset: `${100 - sketchProgress}%` }}>
-                    <rect x="0" y="0" width="800" height="40" className="stroke-muted-foreground/30" strokeWidth="1" strokeDasharray="4 2" />
-                    <circle cx="20" cy="20" r="6" className="stroke-destructive/40" strokeWidth="1.5" strokeDasharray="3 2" />
-                    <circle cx="40" cy="20" r="6" className="stroke-chart-4/40" strokeWidth="1.5" strokeDasharray="3 2" />
-                    <circle cx="60" cy="20" r="6" className="stroke-primary/40" strokeWidth="1.5" strokeDasharray="3 2" />
-                    <rect x="300" y="12" width="200" height="16" rx="8" className="stroke-muted-foreground/30" strokeWidth="1" strokeDasharray="4 2" />
+                    <rect x="0" y="0" width="960" height="48" className="stroke-muted-foreground/30" strokeWidth="1" strokeDasharray="4 2" />
+                    <circle cx="24" cy="24" r="6" className="stroke-destructive/40" strokeWidth="1.5" strokeDasharray="3 2" />
+                    <circle cx="44" cy="24" r="6" className="stroke-chart-4/40" strokeWidth="1.5" strokeDasharray="3 2" />
+                    <circle cx="64" cy="24" r="6" className="stroke-primary/40" strokeWidth="1.5" strokeDasharray="3 2" />
                   </g>
 
                   {/* Sidebar sketch */}
                   <g className="sketch-draw" style={{ strokeDashoffset: `${Math.max(0, 100 - sketchProgress * 1.2)}%` }}>
-                    <rect x="0" y="40" width="160" height="420" className="stroke-muted-foreground/20" strokeWidth="1" strokeDasharray="6 3" />
-                    <rect x="16" y="60" width="128" height="28" rx="6" className="stroke-primary/40" strokeWidth="1" strokeDasharray="4 2" />
-                    <rect x="16" y="100" width="100" height="20" rx="4" className="stroke-muted-foreground/30" strokeWidth="1" strokeDasharray="4 2" />
-                    <rect x="16" y="130" width="110" height="20" rx="4" className="stroke-muted-foreground/30" strokeWidth="1" strokeDasharray="4 2" />
+                    <rect x="0" y="48" width="200" height="492" className="stroke-muted-foreground/20" strokeWidth="1" strokeDasharray="6 3" />
+                    <rect x="16" y="70" width="168" height="36" rx="6" className="stroke-primary/40" strokeWidth="1" strokeDasharray="4 2" />
+                    <rect x="16" y="120" width="140" height="24" rx="4" className="stroke-muted-foreground/30" strokeWidth="1" strokeDasharray="4 2" />
                   </g>
 
                   {/* Canvas area sketch */}
                   <g className="sketch-draw" style={{ strokeDashoffset: `${Math.max(0, 100 - sketchProgress * 1.5)}%` }}>
-                    <rect x="200" y="80" width="360" height="320" rx="12" className="stroke-muted-foreground/20" strokeWidth="2" strokeDasharray="8 4" />
-                    <rect x="280" y="160" width="200" height="160" rx="8" className="stroke-primary/30" strokeWidth="1.5" strokeDasharray="6 3" />
-                    {/* File icon sketch */}
-                    <path d="M340 200 L340 280 L420 280 L420 220 L400 200 Z" className="stroke-muted-foreground/40" strokeWidth="1.5" strokeDasharray="4 2" />
-                    <path d="M400 200 L400 220 L420 220" className="stroke-muted-foreground/40" strokeWidth="1.5" strokeDasharray="4 2" />
+                    <rect x="220" y="70" width="500" height="400" rx="12" className="stroke-muted-foreground/20" strokeWidth="2" strokeDasharray="8 4" />
+                    <rect x="300" y="150" width="340" height="240" rx="8" className="stroke-primary/30" strokeWidth="1.5" strokeDasharray="6 3" />
                   </g>
 
                   {/* Tools panel sketch */}
                   <g className="sketch-draw" style={{ strokeDashoffset: `${Math.max(0, 100 - sketchProgress * 1.8)}%` }}>
-                    <rect x="600" y="40" width="200" height="420" className="stroke-muted-foreground/20" strokeWidth="1" strokeDasharray="6 3" />
-                    <rect x="616" y="60" width="80" height="16" rx="4" className="stroke-muted-foreground/40" strokeWidth="1" strokeDasharray="3 2" />
-                    <rect x="616" y="90" width="168" height="32" rx="6" className="stroke-muted-foreground/30" strokeWidth="1" strokeDasharray="4 2" />
-                    <rect x="616" y="130" width="168" height="32" rx="6" className="stroke-muted-foreground/30" strokeWidth="1" strokeDasharray="4 2" />
-                    <rect x="616" y="170" width="168" height="32" rx="6" className="stroke-muted-foreground/30" strokeWidth="1" strokeDasharray="4 2" />
-                  </g>
-
-                  {/* Timeline sketch */}
-                  <g className="sketch-draw" style={{ strokeDashoffset: `${Math.max(0, 100 - sketchProgress * 2)}%` }}>
-                    <rect x="0" y="460" width="800" height="40" className="stroke-muted-foreground/20" strokeWidth="1" strokeDasharray="6 3" />
-                    <rect x="100" y="474" width="600" height="12" rx="6" className="stroke-muted-foreground/30" strokeWidth="1" strokeDasharray="4 2" />
-                    <rect x="100" y="474" width="200" height="12" rx="6" className="stroke-primary/40" strokeWidth="1.5" strokeDasharray="4 2" />
+                    <rect x="740" y="48" width="220" height="492" className="stroke-muted-foreground/20" strokeWidth="1" strokeDasharray="6 3" />
+                    <rect x="756" y="70" width="100" height="20" rx="4" className="stroke-muted-foreground/40" strokeWidth="1" strokeDasharray="3 2" />
                   </g>
                 </svg>
               </div>
 
-              {/* Real UI Layer */}
+              {/* Real Interactive UI Layer */}
               <div 
-                className={`h-full flex flex-col transition-opacity duration-1000 ${showReal ? 'opacity-100' : 'opacity-0'}`}
+                className={`h-full flex flex-col transition-all duration-1000 ${showReal ? 'opacity-100' : 'opacity-0'}`}
               >
-                {/* Mock Header */}
-                <div className="h-10 border-b border-border/50 bg-card flex items-center px-4 gap-2">
+                {/* Header */}
+                <div className="h-12 border-b border-border/50 bg-card flex items-center px-4 gap-2">
                   <div className="flex gap-1.5">
                     <div className="w-3 h-3 rounded-full bg-destructive/50 animate-dot-pulse" style={{ animationDelay: '0s' }} />
                     <div className="w-3 h-3 rounded-full bg-chart-4/50 animate-dot-pulse" style={{ animationDelay: '0.15s' }} />
                     <div className="w-3 h-3 rounded-full bg-primary/50 animate-dot-pulse" style={{ animationDelay: '0.3s' }} />
                   </div>
                   <div className="flex-1 flex justify-center">
-                    <div className="px-3 py-1 rounded bg-accent/50 text-xs text-muted-foreground">
-                      Document Studio
+                    <div className="px-4 py-1.5 rounded-full bg-primary/10 text-xs text-primary font-medium flex items-center gap-2">
+                      <Sparkles className="h-3 w-3" />
+                      Live Demo
                     </div>
                   </div>
+                  <button 
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {isPlaying ? "⏸ Pause" : "▶ Play"}
+                  </button>
                 </div>
                 
-                {/* Mock Content */}
+                {/* Main Content */}
                 <div className="flex-1 flex">
-                  {/* Sidebar */}
-                  <div className="w-48 border-r border-border/50 p-3 space-y-2 hidden sm:block">
-                    <div 
-                      className="flex items-center gap-2 px-2 py-1.5 rounded bg-primary/10 text-primary text-xs animate-slide-in-stagger"
-                      style={{ animationDelay: showReal ? '0.2s' : '0s' }}
-                    >
-                      <FileText className="h-3 w-3" />
-                      <span>Invoice.pdf</span>
-                    </div>
-                    <div 
-                      className="flex items-center gap-2 px-2 py-1.5 text-muted-foreground text-xs animate-slide-in-stagger"
-                      style={{ animationDelay: showReal ? '0.3s' : '0s' }}
-                    >
-                      <Image className="h-3 w-3" />
-                      <span>Logo.png</span>
-                    </div>
+                  {/* Sidebar - File List */}
+                  <div className="w-52 border-r border-border/50 p-3 space-y-2 hidden sm:block bg-card/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-3 px-2">Workspace</p>
+                    {[
+                      { name: 'Invoice.pdf', type: 'pdf', size: '2.4 MB' },
+                      { name: 'Banner.png', type: 'image', size: '1.8 MB' },
+                      { name: 'Report.docx', type: 'doc', size: '890 KB' },
+                    ].map((file, i) => (
+                      <div 
+                        key={i}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all duration-300 ${
+                          (currentStep === 0 && file.type === 'pdf') || 
+                          (currentStep === 3 && file.type === 'image') ||
+                          (currentStep === 2 && file.type === 'doc')
+                            ? 'bg-primary/10 text-primary border border-primary/20' 
+                            : 'text-muted-foreground hover:bg-accent/50'
+                        }`}
+                      >
+                        {file.type === 'pdf' ? (
+                          <FileText className="h-4 w-4" />
+                        ) : file.type === 'image' ? (
+                          <Image className="h-4 w-4" />
+                        ) : (
+                          <FileText className="h-4 w-4" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-medium">{file.name}</p>
+                          <p className="text-[10px] opacity-60">{file.size}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                   
-                  {/* Canvas */}
-                  <div className="flex-1 p-6 flex items-center justify-center">
-                    <div 
-                      className={`w-full max-w-xs aspect-[3/4] rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground transition-all duration-500 ${showReal ? 'animate-scale-in' : ''}`}
-                    >
-                      <FileText className="h-12 w-12 mb-4 opacity-40" />
-                      <p className="text-sm">Drop files here</p>
-                      <p className="text-xs mt-1 opacity-60">or click to browse</p>
+                  {/* Canvas - Live Preview */}
+                  <div className="flex-1 p-6 flex flex-col items-center justify-center relative overflow-hidden">
+                    {/* Background Pattern */}
+                    <div className="absolute inset-0 opacity-[0.02]" style={{
+                      backgroundImage: 'radial-gradient(circle, hsl(var(--foreground)) 1px, transparent 1px)',
+                      backgroundSize: '20px 20px'
+                    }} />
+                    
+                    {/* Active Step Display */}
+                    <div className="relative w-full max-w-sm">
+                      {/* Step Indicator */}
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                        {demoSteps.map((_, i) => (
+                          <div 
+                            key={i}
+                            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                              i === currentStep 
+                                ? 'bg-primary w-6' 
+                                : i < currentStep 
+                                  ? 'bg-primary/40' 
+                                  : 'bg-border'
+                            }`}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Current Step Card */}
+                      <div 
+                        key={currentStep}
+                        className="bg-card rounded-xl border border-border p-6 shadow-lg animate-scale-in"
+                      >
+                        {/* Step Icon */}
+                        <div className="flex items-center justify-center mb-4">
+                          <div className="relative">
+                            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                              {(() => {
+                                const Icon = getStepIcon(demoSteps[currentStep].type);
+                                return <Icon className="h-8 w-8 text-primary" />;
+                              })()}
+                            </div>
+                            {/* Processing ring */}
+                            <div className="absolute inset-0 rounded-2xl border-2 border-primary/30 animate-ping" />
+                          </div>
+                        </div>
+
+                        {/* Step Info */}
+                        <div className="text-center">
+                          <h3 className="font-semibold text-foreground mb-1">
+                            {demoSteps[currentStep].title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {demoSteps[currentStep].description}
+                          </p>
+                          
+                          {/* Progress Bar */}
+                          <div className="h-2 rounded-full bg-border overflow-hidden">
+                            <div 
+                              className="h-full bg-primary rounded-full transition-all duration-[2500ms] ease-linear"
+                              style={{ 
+                                width: '100%',
+                                animation: 'progress-fill 2.5s linear infinite'
+                              }}
+                            />
+                          </div>
+                          
+                          {/* Action Text */}
+                          <p className="text-xs text-primary mt-2 flex items-center justify-center gap-1">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                            {demoSteps[currentStep].action}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Completed Badge */}
+                      <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs text-muted-foreground">
+                        <Check className="h-3 w-3 text-primary" />
+                        <span>{currentStep + 1} of {demoSteps.length} steps</span>
+                      </div>
                     </div>
                   </div>
                   
                   {/* Tools Panel */}
-                  <div className="w-48 border-l border-border/50 p-3 hidden md:block">
-                    <p className="text-xs font-medium text-muted-foreground mb-3">Tools</p>
+                  <div className="w-56 border-l border-border/50 p-4 hidden md:flex flex-col bg-card/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-4">Quick Actions</p>
                     <div className="space-y-2">
-                      {['Convert', 'Compress', 'OCR', 'Merge'].map((tool, i) => (
+                      {[
+                        { icon: RefreshCw, label: 'Convert Format', active: currentStep === 2 },
+                        { icon: Zap, label: 'Compress', active: currentStep === 3 },
+                        { icon: Type, label: 'OCR Extract', active: currentStep === 1 },
+                        { icon: Crop, label: 'Resize & Crop', active: currentStep === 4 },
+                        { icon: Palette, label: 'Enhance', active: false },
+                      ].map((tool, i) => (
                         <div 
-                          key={tool} 
-                          className="px-2 py-1.5 rounded text-xs text-muted-foreground hover:bg-accent/50 cursor-default animate-slide-in-stagger"
-                          style={{ animationDelay: showReal ? `${0.4 + i * 0.1}s` : '0s' }}
+                          key={i}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs transition-all duration-300 cursor-default ${
+                            tool.active 
+                              ? 'bg-primary/10 text-primary border border-primary/20' 
+                              : 'text-muted-foreground hover:bg-accent/50'
+                          }`}
                         >
-                          {tool}
+                          <tool.icon className={`h-4 w-4 ${tool.active ? 'animate-pulse' : ''}`} />
+                          <span className="font-medium">{tool.label}</span>
+                          {tool.active && (
+                            <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                          )}
                         </div>
                       ))}
+                    </div>
+
+                    {/* Output Preview */}
+                    <div className="mt-auto pt-4 border-t border-border/50">
+                      <p className="text-xs font-medium text-muted-foreground mb-3">Output</p>
+                      <div className="rounded-lg bg-accent/30 p-3 text-xs">
+                        <div className="flex items-center gap-2 text-foreground">
+                          <Check className="h-3 w-3 text-primary" />
+                          <span>Ready to download</span>
+                        </div>
+                        <p className="text-muted-foreground mt-1 text-[10px]">
+                          Sign in to save & download
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -207,10 +368,11 @@ export const HeroSection = () => {
                   <span className="text-xs text-muted-foreground">Timeline</span>
                   <div className="flex-1 h-2 rounded-full bg-border overflow-hidden">
                     <div 
-                      className={`h-full bg-primary/40 rounded-full transition-all duration-1000 ease-out`}
-                      style={{ width: showReal ? '33%' : '0%' }}
+                      className="h-full bg-primary/40 rounded-full transition-all duration-500"
+                      style={{ width: `${((currentStep + 1) / demoSteps.length) * 100}%` }}
                     />
                   </div>
+                  <span className="text-xs text-primary font-medium">{currentStep + 1} actions</span>
                 </div>
               </div>
             </div>
@@ -221,6 +383,14 @@ export const HeroSection = () => {
           </div>
         </div>
       </div>
+
+      {/* CSS for progress animation */}
+      <style>{`
+        @keyframes progress-fill {
+          0% { width: 0%; }
+          100% { width: 100%; }
+        }
+      `}</style>
     </section>
   );
 };

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import StudioHub from "./pages/StudioHub";
@@ -27,11 +28,29 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            {/* Public studio hub - can browse without login */}
             <Route path="/studio" element={<StudioHub />} />
-            <Route path="/studio/documents" element={<DocumentStudio />} />
-            <Route path="/studio/images" element={<ImageStudio />} />
-            <Route path="/studio/developer" element={<DeveloperStudio />} />
-            <Route path="/studio/media" element={<MediaStudio />} />
+            {/* Protected studio routes - require login for full functionality */}
+            <Route path="/studio/documents" element={
+              <ProtectedRoute>
+                <DocumentStudio />
+              </ProtectedRoute>
+            } />
+            <Route path="/studio/images" element={
+              <ProtectedRoute>
+                <ImageStudio />
+              </ProtectedRoute>
+            } />
+            <Route path="/studio/developer" element={
+              <ProtectedRoute>
+                <DeveloperStudio />
+              </ProtectedRoute>
+            } />
+            <Route path="/studio/media" element={
+              <ProtectedRoute>
+                <MediaStudio />
+              </ProtectedRoute>
+            } />
             <Route path="/desktop" element={<DesktopPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/docs" element={<DocsPage />} />
