@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { StudioLayout } from "@/components/layout/StudioLayout";
 import { Button } from "@/components/ui/button";
 import { 
@@ -12,6 +12,7 @@ import { useConversions } from "@/hooks/useConversions";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { QueuePanel } from "@/components/studio/QueuePanel";
 
 const tools = [
   { id: "convert", label: "Convert", icon: FileOutput, description: "PDF, DOCX, TXT, and more", outputFormat: "docx" },
@@ -109,6 +110,15 @@ const DocumentStudio = () => {
     toast({
       title: "Added to Queue",
       description: `${newQueueItems.length} file(s) added to processing queue`,
+    });
+  };
+
+  const reorderQueue = (fromIndex: number, toIndex: number) => {
+    setBatchQueue(prev => {
+      const newQueue = [...prev];
+      const [removed] = newQueue.splice(fromIndex, 1);
+      newQueue.splice(toIndex, 0, removed);
+      return newQueue;
     });
   };
 
@@ -517,19 +527,42 @@ const DocumentStudio = () => {
               })}
             </div>
 
+            {/* Queue Button */}
+            <Button
+              variant="outline"
+              className="w-full mb-2 transition-all duration-200 hover:scale-[1.02]"
+              onClick={() => setShowQueue(true)}
+            >
+              <ListOrdered className="mr-2 h-4 w-4" />
+              Queue ({batchQueue.length})
+            </Button>
+
+            {/* Add to Queue Button */}
+            <Button
+              variant="outline"
+              disabled={files.length === 0}
+              className="w-full mb-2 transition-all duration-200 hover:scale-[1.02]"
+              onClick={addToQueue}
+            >
+              Add to Queue
+            </Button>
+
             {/* Process Button */}
             <Button 
-              disabled={files.length === 0 || isProcessing} 
+              disabled={(files.length === 0 && batchQueue.length === 0) || isProcessing} 
               className="w-full mb-4 transition-all duration-200 hover:scale-[1.02]"
               onClick={processFiles}
             >
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  {isPaused ? 'Paused...' : 'Processing...'}
                 </>
               ) : (
-                "Process Files"
+                <>
+                  <Play className="mr-2 h-4 w-4" />
+                  Process {batchQueue.length > 0 ? 'Queue' : 'Files'}
+                </>
               )}
             </Button>
 
@@ -580,6 +613,21 @@ const DocumentStudio = () => {
           </div>
         </div>
       </div>
+
+      {/* Queue Panel */}
+      {showQueue && (
+        <QueuePanel
+          queue={batchQueue}
+          isProcessing={isProcessing}
+          isPaused={isPaused}
+          onRemove={removeFromQueue}
+          onClear={clearQueue}
+          onReorder={reorderQueue}
+          onProcess={processFiles}
+          onTogglePause={togglePause}
+          onClose={() => setShowQueue(false)}
+        />
+      )}
     </StudioLayout>
   );
 };
