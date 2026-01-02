@@ -7,7 +7,7 @@ import {
   Lock, ChevronRight, Grid3X3, Crop, RotateCw,
   Eraser, Droplet, Type, Smile, ArrowUpRight,
   FileImage, Code, Eye, Loader2, CheckCircle,
-  AlertCircle, Play, Mail
+  AlertCircle, Play, Mail, CloudUpload
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useConversions } from "@/hooks/useConversions";
@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { PhotoEditor } from "@/components/studio/PhotoEditor";
 import { ImageResizer } from "@/components/studio/ImageResizer";
+import { ImageCropRotate } from "@/components/studio/ImageCropRotate";
 
 // Tool categories matching iLoveIMG
 const toolCategories = [
@@ -72,10 +73,12 @@ const ImageStudio = () => {
   const [processingFiles, setProcessingFiles] = useState<Map<string, ProcessingFile>>(new Map());
   const [isProcessing, setIsProcessing] = useState(false);
   const [sendEmailNotification, setSendEmailNotification] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   
   // Editor states
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
   const [showResizer, setShowResizer] = useState(false);
+  const [showCropRotate, setShowCropRotate] = useState(false);
   const [editingImageUrl, setEditingImageUrl] = useState<string>("");
   const [editingImageDimensions, setEditingImageDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   
@@ -91,6 +94,7 @@ const ImageStudio = () => {
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    setIsDragging(false);
     const droppedFiles = Array.from(e.dataTransfer.files).filter(f => 
       f.type.startsWith('image/')
     );
@@ -103,6 +107,16 @@ const ImageStudio = () => {
       };
       reader.readAsDataURL(file);
     });
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
   }, []);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,10 +172,10 @@ const ImageStudio = () => {
     setActiveTool(toolId);
     const tool = tools.find(t => t.id === toolId);
     
-    if (tool?.hasEditor && files.length > 0 && previews.length > 0) {
+    if (files.length > 0 && previews.length > 0) {
       const imageUrl = previews[0];
       
-      // Get image dimensions
+      // Get image dimensions for tools that need them
       const img = new window.Image();
       img.onload = () => {
         setEditingImageDimensions({ width: img.width, height: img.height });
@@ -171,6 +185,8 @@ const ImageStudio = () => {
           setShowPhotoEditor(true);
         } else if (toolId === "resize") {
           setShowResizer(true);
+        } else if (toolId === "crop" || toolId === "rotate") {
+          setShowCropRotate(true);
         }
       };
       img.src = imageUrl;
@@ -208,6 +224,27 @@ const ImageStudio = () => {
         setFiles([file]);
         setPreviews([dataUrl]);
         setShowResizer(false);
+        
+        const newProcessingFiles = new Map<string, ProcessingFile>();
+        newProcessingFiles.set(file.name, {
+          file,
+          preview: dataUrl,
+          progress: 100,
+          status: "completed",
+          outputUrl: dataUrl,
+        });
+        setProcessingFiles(newProcessingFiles);
+      });
+  };
+
+  const handleCropRotateSave = (dataUrl: string) => {
+    fetch(dataUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const file = new File([blob], "edited-image.png", { type: "image/png" });
+        setFiles([file]);
+        setPreviews([dataUrl]);
+        setShowCropRotate(false);
         
         const newProcessingFiles = new Map<string, ProcessingFile>();
         newProcessingFiles.set(file.name, {
@@ -425,6 +462,17 @@ const ImageStudio = () => {
     );
   }
 
+  // Show ImageCropRotate
+  if (showCropRotate && editingImageUrl) {
+    return (
+      <ImageCropRotate
+        imageUrl={editingImageUrl}
+        onSave={handleCropRotateSave}
+        onClose={() => setShowCropRotate(false)}
+      />
+    );
+  }
+
   return (
     <StudioLayout>
       <div className="h-[calc(100vh-7rem)] flex flex-col">
@@ -511,10 +559,27 @@ const ImageStudio = () => {
             {/* Drop Zone */}
             <div
               onDrop={handleDrop}
-              onDragOver={(e) => e.preventDefault()}
-              className="flex-1 rounded-xl border-2 border-dashed border-border hover:border-primary/50 transition-colors flex items-center justify-center bg-card/30"
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              className={`flex-1 rounded-xl border-2 border-dashed transition-all flex items-center justify-center bg-card/30 ${
+                isDragging 
+                  ? 'border-primary bg-primary/10 scale-[1.02]' 
+                  : 'border-border hover:border-primary/50'
+              }`}
             >
-              {files.length === 0 ? (
+              {isDragging ? (
+                <div className="text-center max-w-md px-6 animate-fade-in">
+                  <div className="w-20 h-20 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto mb-6 animate-scale-in">
+                    <CloudUpload className="h-12 w-12 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-primary mb-2">
+                    Drop to upload
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Release to add images
+                  </p>
+                </div>
+              ) : files.length === 0 ? (
                 <div className="text-center max-w-md px-6">
                   <div className="w-16 md:w-20 h-16 md:h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 md:mb-6">
                     <Upload className="h-8 md:h-10 w-8 md:w-10 text-primary" />
