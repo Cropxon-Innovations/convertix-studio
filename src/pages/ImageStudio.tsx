@@ -3,11 +3,11 @@ import { StudioLayout } from "@/components/layout/StudioLayout";
 import { Button } from "@/components/ui/button";
 import { 
   Image, Upload, Download, Clock, Tag, 
-  Maximize, Minimize, Palette, Wand2, Trash2,
+  Maximize, Minimize, Wand2, Trash2,
   Lock, ChevronRight, Grid3X3, Crop, RotateCw,
   Eraser, Droplet, Type, Smile, ArrowUpRight,
   FileImage, Code, Eye, Loader2, CheckCircle,
-  AlertCircle, Play, Pause, ListOrdered, Mail
+  AlertCircle, Play, Mail
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useConversions } from "@/hooks/useConversions";
@@ -17,6 +17,8 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { PhotoEditor } from "@/components/studio/PhotoEditor";
+import { ImageResizer } from "@/components/studio/ImageResizer";
 
 // Tool categories matching iLoveIMG
 const toolCategories = [
@@ -30,7 +32,7 @@ const toolCategories = [
 const tools = [
   // Optimize
   { id: "compress", label: "Compress Image", icon: Minimize, description: "Reduce file size while maintaining quality", outputFormat: "optimized", conversionType: "compress-image", category: "optimize" },
-  { id: "resize", label: "Resize Image", icon: Maximize, description: "Change dimensions by percent or pixels", outputFormat: "resized", conversionType: "resize-image", category: "optimize" },
+  { id: "resize", label: "Resize Image", icon: Maximize, description: "Change dimensions by percent or pixels", outputFormat: "resized", conversionType: "resize-image", category: "optimize", hasEditor: true },
   { id: "upscale", label: "Upscale Image", icon: ArrowUpRight, description: "AI-powered image enlargement", outputFormat: "upscaled", conversionType: "upscale-image", category: "optimize" },
   
   // Edit
@@ -39,7 +41,7 @@ const tools = [
   { id: "remove-bg", label: "Remove Background", icon: Eraser, description: "AI-powered background removal", outputFormat: "png", conversionType: "remove-background", category: "edit" },
   { id: "watermark", label: "Add Watermark", icon: Droplet, description: "Add text or image watermark", outputFormat: "watermarked", conversionType: "watermark-image", category: "edit" },
   { id: "blur-face", label: "Blur Faces", icon: Eye, description: "Automatically blur faces for privacy", outputFormat: "blurred", conversionType: "blur-faces", category: "edit" },
-  { id: "photo-editor", label: "Photo Editor", icon: Wand2, description: "Add text, effects, frames, stickers", outputFormat: "edited", conversionType: "photo-editor", category: "edit" },
+  { id: "photo-editor", label: "Photo Editor", icon: Wand2, description: "Add text, effects, frames, stickers", outputFormat: "edited", conversionType: "photo-editor", category: "edit", hasEditor: true },
   
   // Convert
   { id: "to-jpg", label: "Convert to JPG", icon: FileImage, description: "PNG, GIF, TIF, PSD, SVG to JPG", outputFormat: "jpg", conversionType: "convert-to-jpg", category: "convert" },
@@ -70,6 +72,13 @@ const ImageStudio = () => {
   const [processingFiles, setProcessingFiles] = useState<Map<string, ProcessingFile>>(new Map());
   const [isProcessing, setIsProcessing] = useState(false);
   const [sendEmailNotification, setSendEmailNotification] = useState(false);
+  
+  // Editor states
+  const [showPhotoEditor, setShowPhotoEditor] = useState(false);
+  const [showResizer, setShowResizer] = useState(false);
+  const [editingImageUrl, setEditingImageUrl] = useState<string>("");
+  const [editingImageDimensions, setEditingImageDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  
   const { user } = useAuth();
   const { addConversion, updateConversion } = useConversions();
   const navigate = useNavigate();
@@ -143,6 +152,73 @@ const ImageStudio = () => {
       .getPublicUrl(fileName);
     
     return urlData.publicUrl;
+  };
+
+  const handleToolSelect = (toolId: string) => {
+    setActiveTool(toolId);
+    const tool = tools.find(t => t.id === toolId);
+    
+    if (tool?.hasEditor && files.length > 0 && previews.length > 0) {
+      const imageUrl = previews[0];
+      
+      // Get image dimensions
+      const img = new window.Image();
+      img.onload = () => {
+        setEditingImageDimensions({ width: img.width, height: img.height });
+        setEditingImageUrl(imageUrl);
+        
+        if (toolId === "photo-editor") {
+          setShowPhotoEditor(true);
+        } else if (toolId === "resize") {
+          setShowResizer(true);
+        }
+      };
+      img.src = imageUrl;
+    }
+  };
+
+  const handlePhotoEditorSave = (dataUrl: string) => {
+    // Convert dataUrl to file and add to processing
+    fetch(dataUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const file = new File([blob], "edited-image.png", { type: "image/png" });
+        setFiles([file]);
+        setPreviews([dataUrl]);
+        setShowPhotoEditor(false);
+        
+        // Mark as completed
+        const newProcessingFiles = new Map<string, ProcessingFile>();
+        newProcessingFiles.set(file.name, {
+          file,
+          preview: dataUrl,
+          progress: 100,
+          status: "completed",
+          outputUrl: dataUrl,
+        });
+        setProcessingFiles(newProcessingFiles);
+      });
+  };
+
+  const handleResizerSave = (dataUrl: string) => {
+    fetch(dataUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const file = new File([blob], "resized-image.png", { type: "image/png" });
+        setFiles([file]);
+        setPreviews([dataUrl]);
+        setShowResizer(false);
+        
+        const newProcessingFiles = new Map<string, ProcessingFile>();
+        newProcessingFiles.set(file.name, {
+          file,
+          preview: dataUrl,
+          progress: 100,
+          status: "completed",
+          outputUrl: dataUrl,
+        });
+        setProcessingFiles(newProcessingFiles);
+      });
   };
 
   const processImages = async () => {
@@ -286,6 +362,16 @@ const ImageStudio = () => {
   };
 
   const downloadFile = (pf: ProcessingFile) => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to download your files",
+        variant: "destructive",
+      });
+      navigate('/signin');
+      return;
+    }
+    
     if (!pf.outputUrl) return;
     const a = document.createElement('a');
     a.href = pf.outputUrl;
@@ -296,6 +382,16 @@ const ImageStudio = () => {
   };
 
   const downloadAll = () => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to download your files",
+        variant: "destructive",
+      });
+      navigate('/signin');
+      return;
+    }
+    
     processingFiles.forEach((pf) => {
       if (pf.status === "completed") {
         downloadFile(pf);
@@ -304,6 +400,30 @@ const ImageStudio = () => {
   };
 
   const completedCount = Array.from(processingFiles.values()).filter(f => f.status === "completed").length;
+
+  // Show PhotoEditor
+  if (showPhotoEditor && editingImageUrl) {
+    return (
+      <PhotoEditor
+        imageUrl={editingImageUrl}
+        onSave={handlePhotoEditorSave}
+        onClose={() => setShowPhotoEditor(false)}
+      />
+    );
+  }
+
+  // Show ImageResizer
+  if (showResizer && editingImageUrl) {
+    return (
+      <ImageResizer
+        imageUrl={editingImageUrl}
+        originalWidth={editingImageDimensions.width}
+        originalHeight={editingImageDimensions.height}
+        onSave={handleResizerSave}
+        onClose={() => setShowResizer(false)}
+      />
+    );
+  }
 
   return (
     <StudioLayout>
@@ -441,20 +561,29 @@ const ImageStudio = () => {
                     {completedCount} image{completedCount !== 1 ? 's' : ''} ready!
                   </h3>
                   <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-6">
-                    Download from the sidebar or download all below
+                    {user ? "Download from the sidebar or download all below" : "Sign in to download your files"}
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <Button onClick={downloadAll}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download All
-                    </Button>
-                    <Button variant="outline" onClick={() => {
-                      setFiles([]);
-                      setPreviews([]);
-                      setProcessingFiles(new Map());
-                    }}>
-                      Start New
-                    </Button>
+                    {user ? (
+                      <>
+                        <Button onClick={downloadAll}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Download All
+                        </Button>
+                        <Button variant="outline" onClick={() => {
+                          setFiles([]);
+                          setPreviews([]);
+                          setProcessingFiles(new Map());
+                        }}>
+                          Start New
+                        </Button>
+                      </>
+                    ) : (
+                      <Button onClick={() => navigate('/signin')}>
+                        <Lock className="mr-2 h-4 w-4" />
+                        Sign In to Download
+                      </Button>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -509,7 +638,7 @@ const ImageStudio = () => {
                 return (
                   <button
                     key={tool.id}
-                    onClick={() => setActiveTool(tool.id)}
+                    onClick={() => handleToolSelect(tool.id)}
                     disabled={isProcessing}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-left group ${
                       isActive

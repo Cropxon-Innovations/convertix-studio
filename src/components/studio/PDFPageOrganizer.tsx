@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
 import { PDFDocument, degrees } from "pdf-lib";
+import * as pdfjsLib from "pdfjs-dist";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Trash2, RotateCw, Download, X, Save, GripVertical,
-  ChevronLeft, ZoomIn, ZoomOut
+  ChevronLeft, ZoomIn, ZoomOut, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
+
+// Set up pdf.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 interface PDFPage {
   index: number;
@@ -25,16 +29,19 @@ export const PDFPageOrganizer = ({ pdfFile, onSave, onClose }: PDFPageOrganizerP
   const [pages, setPages] = useState<PDFPage[]>([]);
   const [pdfDoc, setPdfDoc] = useState<PDFDocument | null>(null);
   const [loading, setLoading] = useState(true);
+  const [thumbnailsLoading, setThumbnailsLoading] = useState(true);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set());
   const [thumbnailScale, setThumbnailScale] = useState(1);
 
-  // Load PDF and generate thumbnails
+  // Load PDF and generate thumbnails with pdf.js
   useEffect(() => {
     const loadPDF = async () => {
       try {
         const arrayBuffer = await pdfFile.arrayBuffer();
+        
+        // Load with pdf-lib for manipulation
         const doc = await PDFDocument.load(arrayBuffer);
         setPdfDoc(doc);
 
@@ -52,34 +59,72 @@ export const PDFPageOrganizer = ({ pdfFile, onSave, onClose }: PDFPageOrganizerP
         setPages(newPages);
         setLoading(false);
 
-        // Generate thumbnails using canvas
-        await generateThumbnails(arrayBuffer, newPages);
+        // Generate real thumbnails using pdf.js
+        await generateRealThumbnails(arrayBuffer, pageCount);
       } catch (err) {
         console.error("Error loading PDF:", err);
         toast.error("Failed to load PDF");
         setLoading(false);
+        setThumbnailsLoading(false);
       }
     };
 
     loadPDF();
   }, [pdfFile]);
 
-  const generateThumbnails = async (arrayBuffer: ArrayBuffer, pageList: PDFPage[]) => {
-    // Use pdf.js for rendering thumbnails if available
-    // For now, use placeholder thumbnails
-    const thumbnails = pageList.map((page, i) => ({
-      ...page,
-      thumbnail: `data:image/svg+xml,${encodeURIComponent(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="150" height="200" viewBox="0 0 150 200">
-          <rect width="150" height="200" fill="#f3f4f6" stroke="#e5e7eb" stroke-width="1"/>
-          <text x="75" y="100" text-anchor="middle" fill="#9ca3af" font-size="24" font-family="Arial">
-            ${i + 1}
-          </text>
-        </svg>
-      `)}`,
-    }));
-    
-    setPages(thumbnails);
+  const generateRealThumbnails = async (arrayBuffer: ArrayBuffer, pageCount: number) => {
+    try {
+      // Load PDF with pdf.js
+      const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      
+      const thumbnails: string[] = [];
+      
+      for (let i = 1; i <= pageCount; i++) {
+        const page = await pdfDoc.getPage(i);
+        const viewport = page.getViewport({ scale: 0.3 }); // Small scale for thumbnails
+        
+        // Create canvas for rendering
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        
+        if (!context) continue;
+        
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        
+        // Render page to canvas
+        await page.render({
+          canvasContext: context,
+          viewport: viewport,
+        }).promise;
+        
+        // Convert to data URL
+        const thumbnail = canvas.toDataURL("image/jpeg", 0.7);
+        thumbnails.push(thumbnail);
+        
+        // Update pages with thumbnail as we go
+        setPages(prev => prev.map((p, idx) => 
+          idx === i - 1 ? { ...p, thumbnail } : p
+        ));
+      }
+      
+      setThumbnailsLoading(false);
+    } catch (err) {
+      console.error("Error generating thumbnails:", err);
+      setThumbnailsLoading(false);
+      // Fall back to placeholder thumbnails
+      setPages(prev => prev.map((page, i) => ({
+        ...page,
+        thumbnail: `data:image/svg+xml,${encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="150" height="200" viewBox="0 0 150 200">
+            <rect width="150" height="200" fill="#f3f4f6" stroke="#e5e7eb" stroke-width="1"/>
+            <text x="75" y="100" text-anchor="middle" fill="#9ca3af" font-size="24" font-family="Arial">
+              ${i + 1}
+            </text>
+          </svg>
+        `)}`,
+      })));
+    }
   };
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -239,6 +284,7 @@ export const PDFPageOrganizer = ({ pdfFile, onSave, onClose }: PDFPageOrganizerP
           <h2 className="text-lg font-semibold text-foreground">PDF Page Organizer</h2>
           <p className="text-sm text-muted-foreground">
             {activePages.length} pages • Drag to reorder
+            {thumbnailsLoading && " • Loading thumbnails..."}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -333,7 +379,10 @@ export const PDFPageOrganizer = ({ pdfFile, onSave, onClose }: PDFPageOrganizerP
                       draggable={false}
                     />
                   ) : (
-                    <span className="text-4xl font-bold text-muted-foreground">{page.index + 1}</span>
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+                      <span className="text-sm text-muted-foreground">Loading...</span>
+                    </div>
                   )}
                 </div>
 
