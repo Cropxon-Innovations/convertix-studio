@@ -47,31 +47,29 @@ export const Header = () => {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          {!loading && (
+          {loading ? (
+            <div className="h-8 w-20 bg-muted animate-pulse rounded" />
+          ) : user ? (
             <>
-              {user ? (
-                <>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to="/profile">
-                      <User className="h-4 w-4 mr-2" />
-                      Profile
-                    </Link>
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign out
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to="/signin">Sign in</Link>
-                  </Button>
-                  <Button size="sm" asChild>
-                    <Link to="/studio">Open Studio</Link>
-                  </Button>
-                </>
-              )}
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/profile">
+                  <User className="h-4 w-4 mr-2" />
+                  Profile
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/signin">Sign in</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link to="/studio">Open Studio</Link>
+              </Button>
             </>
           )}
         </div>
@@ -109,7 +107,9 @@ export const Header = () => {
               </Link>
             ))}
             <div className="flex flex-col gap-2 pt-4 border-t border-border/50 mt-2">
-              {user ? (
+              {loading ? (
+                <div className="h-8 w-full bg-muted animate-pulse rounded" />
+              ) : user ? (
                 <>
                   <Button variant="ghost" size="sm" asChild className="justify-start">
                     <Link to="/profile" onClick={() => setMobileMenuOpen(false)}>
