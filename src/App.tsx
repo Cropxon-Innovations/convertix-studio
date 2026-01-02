@@ -5,6 +5,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import StudioHub from "./pages/StudioHub";
+import DocumentStudio from "./pages/DocumentStudio";
+import ImageStudio from "./pages/ImageStudio";
+import DeveloperStudio from "./pages/DeveloperStudio";
+import MediaStudio from "./pages/MediaStudio";
+import DesktopPage from "./pages/DesktopPage";
+import PricingPage from "./pages/PricingPage";
+import DocsPage from "./pages/DocsPage";
+import SignInPage from "./pages/SignInPage";
 
 const queryClient = new QueryClient();
 
@@ -16,7 +25,15 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/studio" element={<StudioHub />} />
+          <Route path="/studio/documents" element={<DocumentStudio />} />
+          <Route path="/studio/images" element={<ImageStudio />} />
+          <Route path="/studio/developer" element={<DeveloperStudio />} />
+          <Route path="/studio/media" element={<MediaStudio />} />
+          <Route path="/desktop" element={<DesktopPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/docs" element={<DocsPage />} />
+          <Route path="/signin" element={<SignInPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
