@@ -36,17 +36,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             {/* Public studio hub - can browse without login */}
             <Route path="/studio" element={<StudioHub />} />
-            {/* Protected studio routes - require login for full functionality */}
-            <Route path="/studio/documents" element={
-              <ProtectedRoute>
-                <DocumentStudio />
-              </ProtectedRoute>
-            } />
-            <Route path="/studio/images" element={
-              <ProtectedRoute>
-                <ImageStudio />
-              </ProtectedRoute>
-            } />
+            {/* Studios are now public - download requires login */}
+            <Route path="/studio/documents" element={<DocumentStudio />} />
+            <Route path="/studio/images" element={<ImageStudio />} />
             <Route path="/studio/developer" element={
               <ProtectedRoute>
                 <DeveloperStudio />
