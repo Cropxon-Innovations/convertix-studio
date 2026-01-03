@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
-  Menu, X, LogOut, User, ChevronRight, Monitor,
+  Menu, X, LogOut, User, ChevronRight, Monitor, ArrowRight,
   FileText, Image, Layers, Scissors, FileX, FileSearch, Minimize2, FileCheck, Type,
   FileImage, Presentation, FileSpreadsheet, Code,
   RotateCw, Hash, Droplet, Crop, PenTool, Unlock, Shield, Eye, GitCompare,
@@ -10,6 +10,16 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { ConvertixLogo } from "@/components/ui/ConvertixLogo";
+import { Badge } from "@/components/ui/badge";
+
+// Tools that are recently added and should show NEW badge
+const newTools = [
+  "/studio/documents?tool=add-watermark",
+  "/studio/documents?tool=compare",
+  "/studio/images?tool=batch",
+  "/studio/images?tool=upscale",
+  "/studio/images?tool=remove-bg",
+];
 
 // Document Studio categories and tools
 const documentCategories = [
@@ -287,15 +297,33 @@ export const Header = () => {
                             <tool.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                              {tool.label}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                                {tool.label}
+                              </p>
+                              {newTools.includes(tool.href) && (
+                                <Badge className="bg-emerald-500/90 text-white text-[10px] px-1.5 py-0 h-4 font-semibold">
+                                  NEW
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground truncate">
                               {tool.description}
                             </p>
                           </div>
                         </button>
                       ))}
+                    </div>
+                    
+                    {/* Explore All Button */}
+                    <div className="mt-4 pt-3 border-t border-border/50">
+                      <button
+                        onClick={() => handleToolClick("/studio")}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted/50 hover:bg-muted text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Explore All Tools
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -387,15 +415,33 @@ export const Header = () => {
                             <tool.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                              {tool.label}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                                {tool.label}
+                              </p>
+                              {newTools.includes(tool.href) && (
+                                <Badge className="bg-emerald-500/90 text-white text-[10px] px-1.5 py-0 h-4 font-semibold">
+                                  NEW
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground truncate">
                               {tool.description}
                             </p>
                           </div>
                         </button>
                       ))}
+                    </div>
+                    
+                    {/* Explore All Button */}
+                    <div className="mt-4 pt-3 border-t border-border/50">
+                      <button
+                        onClick={() => handleToolClick("/studio")}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted/50 hover:bg-muted text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Explore All Tools
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 </div>

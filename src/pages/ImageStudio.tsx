@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { PhotoEditor } from "@/components/studio/PhotoEditor";
 import { ImageResizer } from "@/components/studio/ImageResizer";
 import { ImageCropRotate } from "@/components/studio/ImageCropRotate";
+import { BatchImageProcessor } from "@/components/studio/BatchImageProcessor";
 import { ToolLandingPage } from "@/components/studio/ToolLandingPage";
 import { imageToolConfigs } from "@/lib/toolConfigs";
 import { useSearchParams } from "react-router-dom";
@@ -84,6 +85,7 @@ const ImageStudio = () => {
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
   const [showResizer, setShowResizer] = useState(false);
   const [showCropRotate, setShowCropRotate] = useState(false);
+  const [showBatchProcessor, setShowBatchProcessor] = useState(false);
   const [editingImageUrl, setEditingImageUrl] = useState<string>("");
   const [editingImageDimensions, setEditingImageDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   
@@ -507,6 +509,15 @@ const ImageStudio = () => {
         onSave={handleCropRotateSave}
         onClose={() => setShowCropRotate(false)}
       />
+    );
+  }
+
+  // Show Batch Image Processor
+  if (activeTool === "batch" && !showLandingPage) {
+    return (
+      <StudioLayout>
+        <BatchImageProcessor />
+      </StudioLayout>
     );
   }
 
