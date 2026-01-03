@@ -211,29 +211,39 @@ export const Header = () => {
             
             {showDocumentsMenu && (
               <div 
-                className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-popover border border-border rounded-xl shadow-xl p-5 z-[100] animate-in fade-in-0 slide-in-from-top-2 duration-200"
-                style={{ width: "min(95vw, 920px)" }}
+                className="absolute top-full left-1/2 -translate-x-1/2 mt-3 bg-popover border border-border rounded-2xl shadow-2xl p-6 z-[100] animate-in fade-in-0 slide-in-from-top-3 duration-200"
+                style={{ width: "min(95vw, 980px)" }}
                 onMouseLeave={() => setShowDocumentsMenu(false)}
               >
-                <div className="grid grid-cols-3 xl:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-5">
                   {documentCategories.map((category) => (
-                    <div key={category.title} className={`p-3 rounded-lg ${category.color} border ${category.borderColor}`}>
-                      <h3 className={`text-xs font-semibold mb-3 tracking-wide uppercase ${category.iconColor}`}>
+                    <div key={category.title} className={`p-4 rounded-xl ${category.color} border ${category.borderColor} transition-all hover:shadow-md`}>
+                      <h3 className={`text-xs font-bold mb-4 tracking-wider uppercase ${category.iconColor} flex items-center gap-2`}>
+                        {(() => {
+                          const FirstIcon = category.tools[0]?.icon;
+                          return FirstIcon ? (
+                            <span className={`w-6 h-6 rounded-lg ${category.color} flex items-center justify-center`}>
+                              <FirstIcon className="h-3.5 w-3.5" />
+                            </span>
+                          ) : null;
+                        })()}
                         {category.title}
                       </h3>
-                      <ul className="space-y-1">
+                      <ul className="space-y-1.5">
                         {category.tools.map((tool) => (
                           <li key={tool.href}>
                             <button
                               onClick={() => handleToolClick(tool.href)}
-                              className="group flex items-start gap-2 p-1.5 rounded-md hover:bg-background/80 transition-colors w-full text-left"
+                              className="group flex items-center gap-2.5 p-2 rounded-lg hover:bg-background/90 transition-all w-full text-left"
                             >
-                              <tool.icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${category.iconColor}`} />
-                              <div className="min-w-0">
+                              <div className={`w-8 h-8 rounded-lg ${category.color} border ${category.borderColor} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                                <tool.icon className={`h-4 w-4 ${category.iconColor}`} />
+                              </div>
+                              <div className="min-w-0 flex-1">
                                 <span className="text-sm font-medium text-foreground block truncate group-hover:text-primary transition-colors">
                                   {tool.label}
                                 </span>
-                                <span className="text-xs text-muted-foreground truncate block">
+                                <span className="text-[11px] text-muted-foreground/80 truncate block leading-tight">
                                   {tool.description}
                                 </span>
                               </div>
@@ -264,29 +274,39 @@ export const Header = () => {
             
             {showImagesMenu && (
               <div 
-                className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-popover border border-border rounded-xl shadow-xl p-5 z-[100] animate-in fade-in-0 slide-in-from-top-2 duration-200"
-                style={{ width: "min(95vw, 680px)" }}
+                className="absolute top-full left-1/2 -translate-x-1/2 mt-3 bg-popover border border-border rounded-2xl shadow-2xl p-6 z-[100] animate-in fade-in-0 slide-in-from-top-3 duration-200"
+                style={{ width: "min(95vw, 720px)" }}
                 onMouseLeave={() => setShowImagesMenu(false)}
               >
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
                   {imageCategories.map((category) => (
-                    <div key={category.title} className={`p-3 rounded-lg ${category.color} border ${category.borderColor}`}>
-                      <h3 className={`text-xs font-semibold mb-3 tracking-wide uppercase ${category.iconColor}`}>
+                    <div key={category.title} className={`p-4 rounded-xl ${category.color} border ${category.borderColor} transition-all hover:shadow-md`}>
+                      <h3 className={`text-xs font-bold mb-4 tracking-wider uppercase ${category.iconColor} flex items-center gap-2`}>
+                        {(() => {
+                          const FirstIcon = category.tools[0]?.icon;
+                          return FirstIcon ? (
+                            <span className={`w-6 h-6 rounded-lg ${category.color} flex items-center justify-center`}>
+                              <FirstIcon className="h-3.5 w-3.5" />
+                            </span>
+                          ) : null;
+                        })()}
                         {category.title}
                       </h3>
-                      <ul className="space-y-1">
+                      <ul className="space-y-1.5">
                         {category.tools.map((tool) => (
                           <li key={tool.href}>
                             <button
                               onClick={() => handleToolClick(tool.href)}
-                              className="group flex items-start gap-2 p-1.5 rounded-md hover:bg-background/80 transition-colors w-full text-left"
+                              className="group flex items-center gap-2.5 p-2 rounded-lg hover:bg-background/90 transition-all w-full text-left"
                             >
-                              <tool.icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${category.iconColor}`} />
-                              <div className="min-w-0">
+                              <div className={`w-8 h-8 rounded-lg ${category.color} border ${category.borderColor} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                                <tool.icon className={`h-4 w-4 ${category.iconColor}`} />
+                              </div>
+                              <div className="min-w-0 flex-1">
                                 <span className="text-sm font-medium text-foreground block truncate group-hover:text-primary transition-colors">
                                   {tool.label}
                                 </span>
-                                <span className="text-xs text-muted-foreground truncate block">
+                                <span className="text-[11px] text-muted-foreground/80 truncate block leading-tight">
                                   {tool.description}
                                 </span>
                               </div>

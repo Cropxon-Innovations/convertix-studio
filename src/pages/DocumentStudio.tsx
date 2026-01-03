@@ -18,6 +18,9 @@ import { Progress } from "@/components/ui/progress";
 import { QueuePanel } from "@/components/studio/QueuePanel";
 import { PDFPageOrganizer } from "@/components/studio/PDFPageOrganizer";
 import { PDFMergeSplit } from "@/components/studio/PDFMergeSplit";
+import { PDFWatermark } from "@/components/studio/PDFWatermark";
+import { ToolLandingPage } from "@/components/studio/ToolLandingPage";
+import { documentToolConfigs } from "@/lib/toolConfigs";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -116,6 +119,8 @@ const DocumentStudio = () => {
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showPDFOrganizer, setShowPDFOrganizer] = useState(false);
   const [showMergeSplit, setShowMergeSplit] = useState(false);
+  const [showWatermark, setShowWatermark] = useState(false);
+  const [showLandingPage, setShowLandingPage] = useState(true);
   const [mergeSplitMode, setMergeSplitMode] = useState<"merge" | "split">("merge");
   const [selectedPDFFile, setSelectedPDFFile] = useState<File | null>(null);
   const pauseRef = useRef(false);
@@ -192,6 +197,18 @@ const DocumentStudio = () => {
       if (pdfFiles.length > 0) {
         setMergeSplitMode(toolId as "merge" | "split");
         setShowMergeSplit(true);
+        setShowLandingPage(false);
+        return;
+      }
+    }
+    
+    // Handle watermark tool
+    if (toolId === "add-watermark" && files.length > 0) {
+      const pdfFile = files.find(f => f.name.toLowerCase().endsWith('.pdf'));
+      if (pdfFile) {
+        setSelectedPDFFile(pdfFile);
+        setShowWatermark(true);
+        setShowLandingPage(false);
         return;
       }
     }
@@ -202,8 +219,14 @@ const DocumentStudio = () => {
       if (pdfFile) {
         setSelectedPDFFile(pdfFile);
         setShowPDFOrganizer(true);
+        setShowLandingPage(false);
       }
     }
+  };
+
+  // Start working with tool (from landing page)
+  const handleStartTool = () => {
+    setShowLandingPage(false);
   };
 
   // Add files to batch queue
@@ -515,6 +538,26 @@ const DocumentStudio = () => {
     setShowMergeSplit(false);
   };
 
+  const handleWatermarkSave = (blob: Blob) => {
+    const file = new File([blob], `watermarked_${selectedPDFFile?.name || 'document.pdf'}`, { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    
+    setProcessingFiles(prev => {
+      const updated = new Map(prev);
+      updated.set(file.name, {
+        file,
+        progress: 100,
+        status: "completed",
+        outputUrl: url,
+        outputSize: blob.size,
+      });
+      return updated;
+    });
+    
+    setShowWatermark(false);
+    setSelectedPDFFile(null);
+  };
+
   const getStatusIcon = (status: ProcessingFile["status"]) => {
     switch (status) {
       case "completed": return <CheckCircle className="h-4 w-4 text-primary" />;
@@ -525,6 +568,46 @@ const DocumentStudio = () => {
   };
 
   const completedCount = Array.from(processingFiles.values()).filter(f => f.status === "completed").length;
+
+  // Get current tool config for landing page
+  const currentToolConfig = documentToolConfigs[activeTool];
+
+  // Show Landing Page first
+  if (showLandingPage && currentToolConfig && files.length === 0) {
+    return (
+      <StudioLayout>
+        <ToolLandingPage
+          title={currentToolConfig.title}
+          description={currentToolConfig.description}
+          icon={currentToolConfig.icon}
+          iconColor={currentToolConfig.iconColor}
+          bgColor={currentToolConfig.bgColor}
+          features={currentToolConfig.features}
+          acceptedFormats={currentToolConfig.acceptedFormats}
+          steps={[
+            { number: 1, title: "Upload Files", description: "Drag and drop or browse to upload your PDF documents", icon: Upload },
+            { number: 2, title: "Configure", description: "Adjust settings and preview your changes in real-time", icon: FileOutput },
+            { number: 3, title: "Download", description: "Get your processed files instantly ready to use", icon: Download },
+          ]}
+          onStartClick={handleStartTool}
+        />
+      </StudioLayout>
+    );
+  }
+
+  // Show Watermark Editor
+  if (showWatermark && selectedPDFFile) {
+    return (
+      <PDFWatermark
+        pdfFile={selectedPDFFile}
+        onSave={handleWatermarkSave}
+        onClose={() => {
+          setShowWatermark(false);
+          setSelectedPDFFile(null);
+        }}
+      />
+    );
+  }
 
   return (
     <StudioLayout>

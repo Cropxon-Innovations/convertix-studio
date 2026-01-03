@@ -20,6 +20,9 @@ import { Label } from "@/components/ui/label";
 import { PhotoEditor } from "@/components/studio/PhotoEditor";
 import { ImageResizer } from "@/components/studio/ImageResizer";
 import { ImageCropRotate } from "@/components/studio/ImageCropRotate";
+import { ToolLandingPage } from "@/components/studio/ToolLandingPage";
+import { imageToolConfigs } from "@/lib/toolConfigs";
+import { useSearchParams } from "react-router-dom";
 
 // Tool categories matching iLoveIMG
 const toolCategories = [
@@ -66,14 +69,16 @@ interface ProcessingFile {
 }
 
 const ImageStudio = () => {
+  const [searchParams] = useSearchParams();
   const [files, setFiles] = useState<File[]>([]);
-  const [activeTool, setActiveTool] = useState("compress");
+  const [activeTool, setActiveTool] = useState(searchParams.get("tool") || "compress");
   const [activeCategory, setActiveCategory] = useState("all");
   const [previews, setPreviews] = useState<string[]>([]);
   const [processingFiles, setProcessingFiles] = useState<Map<string, ProcessingFile>>(new Map());
   const [isProcessing, setIsProcessing] = useState(false);
   const [sendEmailNotification, setSendEmailNotification] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showLandingPage, setShowLandingPage] = useState(true);
   
   // Editor states
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
@@ -174,6 +179,7 @@ const ImageStudio = () => {
     
     if (files.length > 0 && previews.length > 0) {
       const imageUrl = previews[0];
+      setShowLandingPage(false);
       
       // Get image dimensions for tools that need them
       const img = new window.Image();
@@ -191,6 +197,11 @@ const ImageStudio = () => {
       };
       img.src = imageUrl;
     }
+  };
+
+  // Start working with tool (from landing page)
+  const handleStartTool = () => {
+    setShowLandingPage(false);
   };
 
   const handlePhotoEditorSave = (dataUrl: string) => {
@@ -437,6 +448,32 @@ const ImageStudio = () => {
   };
 
   const completedCount = Array.from(processingFiles.values()).filter(f => f.status === "completed").length;
+
+  // Get current tool config for landing page
+  const currentToolConfig = imageToolConfigs[activeTool];
+
+  // Show Landing Page first
+  if (showLandingPage && currentToolConfig && files.length === 0) {
+    return (
+      <StudioLayout>
+        <ToolLandingPage
+          title={currentToolConfig.title}
+          description={currentToolConfig.description}
+          icon={currentToolConfig.icon}
+          iconColor={currentToolConfig.iconColor}
+          bgColor={currentToolConfig.bgColor}
+          features={currentToolConfig.features}
+          acceptedFormats={currentToolConfig.acceptedFormats}
+          steps={[
+            { number: 1, title: "Upload Images", description: "Drag and drop or browse to upload your images", icon: Upload },
+            { number: 2, title: "Edit & Process", description: "Apply your chosen effect and preview results", icon: Image },
+            { number: 3, title: "Download", description: "Get your processed images instantly", icon: Download },
+          ]}
+          onStartClick={handleStartTool}
+        />
+      </StudioLayout>
+    );
+  }
 
   // Show PhotoEditor
   if (showPhotoEditor && editingImageUrl) {
